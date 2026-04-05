@@ -54,7 +54,7 @@
 
 ### ② 일반 스테이지 (메인 플레이)
 
-![Normal Stage](images/02_normal_stage.png)
+![Normal Stage](02_normal_stage.png)
 
 - 스크롤 배경 위에서 적이 사방에서 출현
 - 적 3종이 등장:
@@ -70,7 +70,7 @@
 
 ### ③ 레벨업 — 보상 선택 (Transparent Scene)
 
-![Level Up](images/03_levelup.png)
+![Level Up](03_levelup.png)
 
 - 경험치가 가득 차면 게임이 잠시 멈추고 **보상 선택 화면** 등장
 - **3개의 카드** 중 1개를 선택:
@@ -84,7 +84,7 @@
 
 ### ④ 보스 스테이지
 
-![Boss Stage](images/04_boss_stage.png)
+![Boss Stage](04_boss_stage.png)
 
 - 보스전 진입 시 **WARNING** 연출과 함께 전환
 - 보스가 Bezier Curve 경로를 따라 이동하며 패턴 공격
@@ -96,7 +96,7 @@
 
 ### ⑤ 일시정지 (Transparent Scene)
 
-![Pause Screen](images/05_pause.png)
+![Pause Screen](05_pause.png)
 
 - **반투명 오버레이**로 게임 화면 위에 표시
 - 현재 빌드 요약 (획득한 무기·스킬) 표시
@@ -106,7 +106,7 @@
 
 ### ⑥ 결과 화면 (클리어 / 게임 오버)
 
-![Result Screen](images/06_result.png)
+![Result Screen](06_result.png)
 
 - 보스 클리어 시 **BOSS CLEAR!**, 사망 시 **GAME OVER** 표시
 - 최종 점수, 도달 레벨, 처치 수, 플레이 시간
