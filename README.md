@@ -44,7 +44,7 @@
 
 ### ① 타이틀 화면
 
-![Title Screen](images/01_title.png)
+![Title Screen](01_title.png)
 
 - 게임 로고와 배경 별 연출
 - GAME START 버튼으로 바로 일반 스테이지 진입
