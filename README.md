@@ -1,6 +1,6 @@
 # Sky Blaster
 
-> **종스크롤 슈팅 × 로그라이크** — Android 2D Game (Java)
+> **종스크롤 슈팅 × 로그라이크** — Android 2D Game
 
 ---
 
