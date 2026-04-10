@@ -18,6 +18,7 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder) 
 
     private var targetX = x
     private var targetY = y
+    private var fireCooldown = 0f
 
     init {
         syncDstRect()
@@ -38,6 +39,18 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder) 
         x = x.coerceIn(minX, maxX)
         y = y.coerceIn(minY, maxY)
         syncDstRect()
+
+        fireBullet(gctx)
+    }
+
+    private fun fireBullet(gctx: GameContext) {
+        fireCooldown -= gctx.frameTime
+        if (fireCooldown > 0f) return
+        fireCooldown = FIRE_INTERVAL
+
+        val scene = gctx.scene as? MainScene ?: return
+        val bullet = Bullet.get(gctx, x, y - PLAYER_HEIGHT / 2f - BULLET_OFFSET)
+        scene.world.add(bullet, MainScene.Layer.BULLET)
     }
 
     fun onTouchEvent(event: MotionEvent): Boolean {
@@ -56,5 +69,7 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder) 
         const val SPEED = 1500f
         const val PLAYER_WIDTH = 100f
         const val PLAYER_HEIGHT = 100f
+        const val FIRE_INTERVAL = 0.3f
+        const val BULLET_OFFSET = 8f
     }
 }

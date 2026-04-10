@@ -11,9 +11,6 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         BACKGROUND,
         PLAYER,
         BULLET,
-        ENEMY,
-        CONTROLLER,
-        UI,
     }
 
     private val background = VertScrollBackground(gctx, R.mipmap.sky_bg, BACKGROUND_SPEED)
