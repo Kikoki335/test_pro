@@ -22,6 +22,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SmartphoneTermProject"
+rootProject.name = "test_pro"
 include(":app")
+include(":a2dg")
  

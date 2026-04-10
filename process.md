@@ -1,164 +1,169 @@
-# Sky Blaster — process.md
+# Sky Blaster — 진행 README (1주차)
 
-> 진행 상황과 이어서 해야 할 일을 정리한 문서
+> 게임 컨셉 / 8주 일정 / 정량 개발 범위는 [README.md](README.md) 참고.
+>
+> 본 문서는 **개발 진행 로그**로, 매 주차 끝에 갱신한다.
 
-## 1. 현재까지 진행 상태 (2026-04-29)
+---
 
-README 일정 기준 **1주차 ~ 5주차 일부**까지 코드를 채워 두었음 (누계 약 52%).
-교수님이 DragonFlight 수업에서 다룬 패턴(`a2dg`, Recycle, World layer enum, IBoxCollidable, Gauge / LabelUtil, wave 시스템, cooltime gauge, spark, 구름 layer)을 모두 사용하고 있음.
+## 0. 기준선
 
-- [x] 1주차 — 프로젝트 셋업 (`:a2dg` 모듈, BaseGameActivity, GameView, Scene/World)
-- [x] 2주차 — Player 터치 드래그 + 자동 발사 + 별/구름 두 layer parallax + cooltime gauge / spark / damage flash
-- [x] 3주차 — Enemy 3종 + EnemyGenerator + CollisionChecker + Recycle pattern + **wave 기반 속도/생성속도 스케일링**
-- [x] 4주차 — EXP 구슬 드롭/흡수, 레벨업 시스템, **`LevelUpScene` 카드 3장**, **무기 3종 (DUAL/TRIPLE/SPREAD)**, **능력치 2종 (DAMAGE_UP / ATTACK_SPEED 누적)**
-- [△] 5주차 — 보스 진입 카운트다운 HUD 까지. 스킬과 보스 진입 선택 UI 미구현
-- [ ] 6주차 — 보스 Scene + Bezier 패턴
-- [ ] 7주차 — 이펙트 / BGM / 타이틀 / Pause / Result Scene (게임오버 오버레이만 임시 구현)
-- [ ] 8주차 — 마감 점검
+- **계획서 작성일**: 2026-04-06
+- **주차 분기**: 1주차 4/6~4/12, 2주차 4/13~4/19, 3주차 4/20~4/26, 4주차 4/27~5/3
+- **참고 프레임워크**: 교수님 `spgp_2026` 저장소의 **2026-04-10 시점**(commit `9e232ab` 까지) 의 `:a2dg` 모듈을 그대로 가져온다.
+  - 4/13 의 `Scene.clipsRect`, `GameMetrics.borderRect`, `Activity nosensor`, `appCategory="game"`, `HorzScrollBackground` 는 **포함하지 않는다**.
 
-이미지 파일 없이 모든 캐릭터·배경을 Canvas 도형으로 그려 둠.
-**현재 placeholder 규칙: 모든 게임 오브젝트는 "원 + 한자 라벨"로 표시** —
-Player "내" / Kamikaze "폭" / Ranged "원" / Splitter "분" / Bullet·EnemyBullet·ExpOrb 는 라벨 없는 작은 원.
-이미지로 교체할 때 어디를 수정하면 되는지는 6번 섹션에 표로 정리해 두었음.
+---
 
-## 2. 모듈 구조
+## 1. 1주차 진행 현황
+
+계획서의 1주차 항목은 **"프로젝트 셋업 구현 — CustomView 기반 GameView, Scene 전환 구조, 리소스 수집"** 이다. 1주차 안에 끝낼 부분과, 후순위로 미루거나 2주차 이후로 당겨도 되는 부분을 아래처럼 나눈다.
+
+### 1-1. 1주차 작업 분할
+
+| # | 작업 | 상태 | 비고 |
+|:-:|------|:----:|------|
+| **W1-1** | `:a2dg` 프레임워크를 4/10 시점 그대로 가져오기 | ✅ | 본 세션에서 완료. 아래 §2 참고 |
+| **W1-2** | `:app` 모듈 골격 — `SkyBlasterActivity` + `TitleScene` + `MainScene` placeholder, Scene 전환 데모 | ✅ | 본 세션에서 완료. 아래 §3 참고 |
+| **W1-3** | 디버그 표시 확인 — 가상 좌표계 격자 / FPS / collision box debug | ⬜ | `BuildConfig.DEBUG` 빌드로 실기기에서 한 번 띄워서 확인만 하면 끝 |
+| **W1-4** | (선반영) Player 스켈레톤 — 드래그 이동, Canvas 도형 placeholder | ⬜ | 계획서 2주차이지만 리소스 없이 가능. §4 참고 |
+| **W1-5** | (선반영) Bullet 자동 발사 + `IRecyclable` Recycle 패턴 | ⬜ | 계획서 2주차이지만 리소스 없이 가능 |
+| **W1-6** | (선반영) `IBoxCollidable` + `CollisionChecker` 골격 | ⬜ | 계획서 3주차 패턴이지만 빈 hook 만이라도 미리 잡아 둘 수 있음 |
+| **W1-7** | (후순위) **리소스 수집** — `space_bg.png`, `player.png`, enemy strip 등 | ⏸ | 의도적으로 후순위. 2주차 시작 시 한꺼번에 모음 |
+
+`✅` 완료 / `⬜` 1주차 안에 진행 / `⏸` 후순위
+
+### 1-2. 리소스 없이 미리 할 수 있는 것 (4/10 기준)
+
+교수님이 4/10 시점에 가지고 있던 게임 코드는 다음과 같다.
+
+| 분류 | 4/10 교수님 게임 코드 (DragonFlight) | Sky Blaster 적용 가능성 |
+|------|------|------|
+| Player | `Sprite(R.mipmap.fighters)` + `IBoxCollidable`, 드래그 이동, `cooltime gauge`, sprite sheet roll | 드래그 이동만 도형 placeholder 로 옮기면 **리소스 없이 가능** |
+| Bullet | `Sprite(R.mipmap.laser_1)` + `IBoxCollidable` + `IRecyclable`, recycle pattern | 노란 사각형 도형 + `IRecyclable` 패턴 그대로 → **가능** |
+| Enemy | `AnimSprite(R.mipmap.enemy_01, 20fps, 20)` + `IBoxCollidable` + `IRecyclable`, life gauge | 도형 placeholder + 같은 패턴 → **가능** (단, AnimSprite 는 strip PNG 가 있어야 의미 있음. 도형으로는 정적이 됨) |
+| EnemyGenerator | 주기적 spawn, wave 별 속도 스케일링 | **가능** (Enemy placeholder 있으면) |
+| CollisionChecker | Bullet/Enemy/Player 충돌 처리, `forEachReversedAt`, smart cast | **가능** |
+| ScoreNumber | `ImageNumber(R.mipmap.number_24x32)` | 리소스 필요 → 후순위 |
+| Background | `Sprite(R.mipmap.df_bg)` → `VertScrollBackground` | 리소스 필요 → 후순위 |
+
+요약: **Player / Bullet / Enemy(정적) / Generator / CollisionChecker** 까지는 placeholder 도형으로 1주차에 미리 만들어 둘 수 있다. **배경 스크롤 / 점수 ImageNumber / Enemy 애니메이션** 은 PNG 가 있어야 의미가 있으므로 2주차로 미룬다.
+
+---
+
+## 2. `:a2dg` 모듈 — 4/10 기준
+
+가져온 파일 (총 19 + manifest):
+
+```
+a2dg/src/main/
+├── AndroidManifest.xml
+└── java/kr/ac/tukorea/ge/spgp2026/a2dg/
+    ├── activity/BaseGameActivity.kt
+    ├── objects/
+    │   ├── AnimSprite.kt
+    │   ├── IBoxCollidable.kt
+    │   ├── IGameObject.kt
+    │   ├── IRecyclable.kt
+    │   ├── ImageNumber.kt
+    │   ├── JoyStick.kt              ← 4/9 시점부터 존재
+    │   ├── Sprite.kt                ← 4/9 의 setCenterProportionalWidth/Height helper 포함
+    │   └── VertScrollBackground.kt  ← 4/9 추가
+    ├── res/{BitmapPool, GameResources}.kt
+    ├── scene/{Scene, SceneStack, World}.kt
+    ├── util/{Gauge, LabelUtil}.kt
+    └── view/{GameContext, GameMetrics, GameView}.kt
+```
+
+### 4/13 변경분 중 **포함하지 않은** 것
+
+| 4/13 commit | 내용 | 1주차에 미포함 이유 |
+|-------------|------|--------------------|
+| `7867d49` | Activity `screenOrientation="nosensor"` + `appCategory="game"`, `minSdk` 24 → 26 | 4/10 기준이므로 그대로 두고, Sky Blaster 는 manifest 의 `portrait` 만 유지 |
+| `3300abc` | `Scene.clipsRect`, `GameMetrics.borderRect`, `GameView` 의 `clipRect` 처리 | 4/10 기준 미포함. clip 이 필요해지면 그때 가져오기로 |
+| `5a2126b` | `clouds.png` 리소스 + 구름 background layer | PNG 리소스 — 후순위 |
+| (homework branch) | `HorzScrollBackground` | 가로 스크롤은 본 게임에 불필요 |
+
+---
+
+## 3. `:app` 모듈 — 1주차 골격
+
+```
+app/src/main/java/kr/ac/tukorea/ge/spgp2026/skyblaster/
+├── SkyBlasterActivity.kt   # BaseGameActivity 상속, createRootScene → TitleScene
+├── TitleScene.kt           # "SKY BLASTER" + "TAP TO START", touch → MainScene.push()
+└── MainScene.kt            # Layer enum 9종 reserve, 빈 World, "MAIN SCENE" placeholder text
+```
+
+`MainScene` 안의 `Layer` enum 은 향후 주차에서 채울 자리만 미리 잡아 둔다:
+
+```
+BACKGROUND → CLOUD → EXP → ENEMY_BULLET → ENEMY → BULLET → PLAYER → CONTROLLER → UI
+```
+
+### Scene 전환 흐름
+
+```
+[앱 실행]
+   │ SkyBlasterActivity.createRootScene
+   ▼
+TitleScene  ──ACTION_DOWN──▶  MainScene  ──BACK──▶ TitleScene
+                  push                       pop
+```
+
+### 빌드 / Manifest 정리
+
+- `app/AndroidManifest.xml` — `portrait` 유지, `appCategory="game"` 제거
+- `app/build.gradle.kts` — `minSdk = 24` 로 환원
+
+---
+
+## 4. 다음 (1주차 마무리 → 2주차 시작) 작업 메모
+
+### W1-3 디버그 확인 체크리스트
+- 빌드 후 실기기에서 빨간 테두리 + 회색 100단위 격자
+- 좌상단 FPS / 객체 수 / 레이어별 카운트
+- 하단 frame time 그래프
+
+### W1-4 Player 스켈레톤 (선반영 시)
+- `Player(gctx) : IGameObject, IBoxCollidable` (Sprite 상속 X — PNG 없으므로)
+- `width=120f`, `height=120f`, 중심 (450, 1400)
+- 드래그 이동: ACTION_DOWN 에서 `dragOffset` 기억, ACTION_MOVE 에서 `targetX/Y` 갱신, `update()` 에서 `SPEED * frameTime` 만큼 보정 이동
+- `draw()` 는 파란 원 + 가운데 "내" 한자 라벨 (placeholder)
+- `collisionRect` 는 dstRect 의 절반 폭 inset
+
+### W1-5 Bullet 자동 발사 (선반영 시)
+- `Bullet : IGameObject, IBoxCollidable, IRecyclable`
+- `private constructor` + `companion object get(world, x, y, vx, vy, power)`
+- `World.obtain(Bullet::class.java) ?: Bullet(gctx)` 패턴
+- `Player.update()` 가 `fireCoolTime` 카운터로 자동 발사 호출
+
+### W1-7 → 2주차로 미루는 리소스 후보
+- `space_bg.png` (어두운 우주, 720x2560 권장)
+- `clouds.png` 또는 `nebula.png` (parallax 두 번째 layer)
+- `player.png` 또는 fighters strip
+- `bullet.png` (28x40 노란 레이저)
+- `enemy_*.png` 3종 (180x180)
+- `enemy_bullet.png`, `exp_orb.png`
+- `number_24x32.png` (HUD 점수용)
+
+---
+
+## 5. 현재 디렉터리 트리
 
 ```
 SmartphoneTermProject/
-├── a2dg/                                      # 수업에서 만들어 가는 프레임워크
-│   └── kr.ac.tukorea.ge.spgp2026.a2dg/
-│       ├── activity/BaseGameActivity
-│       ├── view/{GameView, GameContext, GameMetrics}
-│       ├── scene/{Scene, SceneStack, World}
-│       ├── objects/{IGameObject, IBoxCollidable, IRecyclable,
-│       │            Sprite, AnimSprite,
-│       │            VertScrollBackground, HorzScrollBackground, ImageNumber}
-│       ├── res/{BitmapPool, GameResources}
-│       └── util/{Gauge, LabelUtil}
+├── README.md                        # 게임 컨셉 / 8주 일정 (계획서)
+├── process.md                       # ← 본 문서
+├── 01_title.png ~ 06_result.png     # 계획서 mockup
+├── settings.gradle.kts              # include(":app", ":a2dg")
+├── a2dg/                            # §2 참고 (4/10 기준)
 └── app/
-    └── kr.ac.tukorea.ge.spgp2026.skyblaster/
-        ├── SkyBlasterActivity                 # 진입점
-        ├── MainScene                          # 일반 스테이지 Scene (gameOver, bossTimer, pendingLevelUps)
-        ├── LevelUpScene                       # 카드 3장 transparent push
-        ├── Reward + RewardKind                # 보상 enum (WEAPON / STAT)
-        ├── StarfieldBackground                # 별 두 레이어
-        ├── CloudLayer                         # 구름 (parallax 2번째 layer)
-        ├── Player                             # 무기 / 능력치 / cooltime gauge / spark / damage flash
-        ├── Bullet                             # vx,vy 방향 지원 + Recycle
-        ├── Enemy / KamikazeEnemy / RangedEnemy / SplitterEnemy
-        ├── EnemyBullet                        # 원거리 적이 쏘는 탄환
-        ├── EnemyGenerator                     # wave 기반 속도/생성속도 스케일링
-        ├── CollisionChecker                   # 게임오버 시 skip
-        ├── ExpOrb                             # EXP 구슬 + 자석 흡수
-        └── Hud                                # 점수/레벨/EXP/Wave/BossTimer/GameOver
+    └── src/main/
+        ├── AndroidManifest.xml      # portrait, appCategory 없음
+        ├── java/kr/ac/tukorea/ge/spgp2026/skyblaster/
+        │   ├── SkyBlasterActivity.kt
+        │   ├── TitleScene.kt
+        │   └── MainScene.kt
+        └── res/                     # ic_launcher 만, 게임 리소스는 후순위
 ```
-
-## 3. 구현된 기능 자세히
-
-### Activity / Scene
-- `SkyBlasterActivity` 는 `BaseGameActivity` 상속, fullscreen + portrait 잠금.
-- `MainScene` 의 layer 9개(BACKGROUND/CLOUD/EXP/ENEMY_BULLET/ENEMY/BULLET/PLAYER/CONTROLLER/UI), `clipsRect = true`.
-- `LevelUpScene` 은 transparent overlay — `mainScene.draw(canvas)` 후 반투명 + 카드.
-
-### 배경 (parallax 2 layer, 교수님 5a2126b 패턴)
-- `StarfieldBackground` — 별 두 레이어. `CloudLayer` — 더 빠른 흰파랑 구름.
-- 나중에 PNG 두 장이 들어오면 `a2dg.VertScrollBackground` 두 개로 그대로 교체 가능.
-
-### Player (cooltime / spark / damage flash / weapon / stat)
-- 화면 어디든 잡고 끌면 그만큼 비행기가 따라온다 (텔레포트 없음).
-- HP gauge + cooltime gauge 두 개를 비행기 아래에 그린다 (교수님 4ccd8a7 패턴).
-- 발사 직후 spark 가 잠깐 머즐에 표시된다 (교수님 e5fab46 패턴).
-- 피격 시 damage flash — 비행기 위에 빨간색이 0.25초 깜빡임.
-- weapon: `SINGLE / DUAL / TRIPLE / SPREAD` 4종.
-- stat: `damageBonus` (DAMAGE_UP 누적), `fireIntervalScale` (ATTACK_SPEED 누적).
-- `applyReward(reward)` 에서 보상 종류에 따라 weapon 교체 또는 stat 누적.
-
-### Enemy 3종 + Wave (교수님 8ea2c51 패턴)
-- 모두 `init(...)` 에서 `speedMultiplier` 를 받아 현재 wave 에 맞춰 빨라진다.
-- KamikazeEnemy / RangedEnemy / SplitterEnemy 모두 Recycle pattern.
-- EnemyGenerator 가 12초마다 wave++ 하고 생성간격을 0.92 배씩 줄임 (`MIN_INTERVAL` 까지).
-
-### EXP / 레벨업
-- 적이 총알에 죽을 때만 ExpOrb 드롭. 자석 흡수.
-- `MainScene.gainExp()` 가 EXP 누적 + 레벨업 → `pendingLevelUps++`.
-- 매 update 마지막에 `pendingLevelUps > 0` 이면 한 개씩 pop → `LevelUpScene` push.
-- 레벨이 한 번에 여러 단계 오르면 카드 화면이 연속해서 뜬다.
-
-### Reward / LevelUpScene
-- `Reward.roll(3)` 으로 5종 중 3개 셔플.
-  - `DUAL_SHOT`, `TRIPLE_SHOT`, `SPREAD_SHOT` (WEAPON)
-  - `DAMAGE_UP`, `ATTACK_SPEED` (STAT)
-- 카드 한 장을 터치하면 `player.applyReward(reward)` + `pop()`.
-- 뒤로가기로 우회 불가 (`onBackPressed()` 가 true).
-
-### 게임 오버
-- `player.hp <= 0` 되면 `MainScene.gameOver = true`.
-- 모든 update가 즉시 return — 적/총알/EnemyGenerator 가 멈춤.
-- HUD 가 반투명 검정 + `GAME OVER` + `TAP TO RESTART` 표시.
-- 화면 아무 곳이나 터치하면 `gctx.sceneStack.change(MainScene(gctx))` 로 새 게임 시작.
-
-### Recycle pattern
-- `Bullet`, `EnemyBullet`, `KamikazeEnemy`, `RangedEnemy`, `SplitterEnemy`, `ExpOrb`
-  모두 `IRecyclable` + private 생성자 + `companion object get(...)` 패턴.
-
-## 4. 이어서 해야 할 일 (주차별 다음 작업)
-
-### 5주차 마무리 — 스킬 + 보스 진입 패널
-1. `Skill` 인터페이스 (`onTouch`, `update`) 만들고 Player 가 슬롯 1~2개 보관.
-2. 화면 아래 빈 영역에 스킬 버튼 영역을 두고, 그 영역의 터치는 `Player.onTouchEvent` 보다 먼저 가로채기.
-3. `Reward` 에 SKILL 종류 3개 추가하고 `LevelUpScene` 에 자연스럽게 끼워 넣기.
-4. `bossTimer == 0` 일 때 작은 패널을 띄워 "지금 보스로 진입할지" / "조금 더 파밍할지" 선택.
-
-### 6주차 — 보스
-- `Boss` (Bezier 경로 따라 이동, 패턴 공격, HP 게이지 위에 표시).
-- `BossScene` 으로 분기하거나 MainScene 안에서 wave 형식으로 처리 (선호도에 따라).
-
-### 7주차 — UI / 이펙트 / 사운드
-- `TitleScene`, `PauseScene`(transparent), `ResultScene`.
-- `AnimSprite` 로 폭발/레벨업/피격 strip 재생.
-- BGM 두 종 (`MediaPlayer`).
-
-### 8주차 — 버그 / 마감
-
-## 5. 빌드 / 실행
-
-1. Android Studio 에서 이 프로젝트 폴더를 열고 Gradle sync.
-   - `:a2dg` 모듈이 잡혀야 함. 안 보이면 `settings.gradle.kts` 의 `include(":a2dg")` 와
-     `app/build.gradle.kts` 의 `implementation(project(":a2dg"))` 확인.
-2. Run 'app'. 기본 동작:
-   - 화면을 끌면 비행기 이동.
-   - 자동 발사. 적이 위에서 내려옴.
-   - 적 처치 → 녹색 EXP 구슬 → 흡수 → EXP 가득 차면 카드 3장 화면.
-   - 카드 한 장 터치 → 즉시 게임 재개.
-   - HP 0 이면 `GAME OVER` → 화면 터치하면 다시 시작.
-3. 디버그 빌드에서는 collision box / 격자 / FPS 표시.
-   거슬리면 `SkyBlasterActivity.kt` 의 debug flag 들을 false 로.
-
-## 6. 이미지를 넣을 때 교체할 위치
-
-지금은 PNG 가 없어도 바로 돌도록 모든 캐릭터/배경을 Canvas 도형으로 그렸음.
-README 구상에 맞는 진짜 그림을 넣고 싶다면 아래만 바꾸면 됨.
-
-| 파일 | 현재 그림 | 이미지로 교체할 때 |
-|------|----------|------------------|
-| `StarfieldBackground.kt` | 별 두 레이어 | `a2dg.VertScrollBackground(R.mipmap.space_bg, ...)` 로 교체 |
-| `CloudLayer.kt` | 흰파랑 원 7개 | `a2dg.VertScrollBackground(R.mipmap.nebula, ...)` 로 교체 |
-| `Player.kt` | 파란 비행기 Path | `Sprite` 상속, `R.mipmap.player`. fighters strip 이 있으면 srcRect 로 roll 처리 |
-| `Bullet.kt` / `EnemyBullet.kt` | RoundRect / 원 | laser png 한 장이면 충분 |
-| `KamikazeEnemy` / `RangedEnemy` / `SplitterEnemy` | 도형 | 각각 `AnimSprite(R.mipmap.enemy_*, fps, frameCount)` 로 교체 |
-| `ExpOrb.kt` | 녹색 원 | exp_orb.png |
-| `Hud.kt` 점수 | LabelUtil 텍스트 | `ImageNumber` + `number_24x32.png` |
-
-## 7. 필요한 이미지 (이미지 추가 권장 목록)
-
-지금 당장은 필요 없음. 위 표대로 교체할 때를 위해 모아 둘 후보:
-
-- `space_bg.png` — 어두운 배경, 720x2560.
-- `nebula_bg.png` — 옅은 색의 위쪽 layer (투명 배경 PNG), 720x2560.
-- `player.png` 또는 fighters strip (roll 11frame, 80x80 한 frame).
-- `bullet.png` — 28x40 정도 노란 레이저.
-- `enemy_kamikaze.png`, `enemy_ranged.png`, `enemy_splitter.png` — 각 180x180.
-- `enemy_bullet.png` — 작고 둥근 빨간 탄, 32x32.
-- `exp_orb.png` — 24x24 녹색 보석.
-- `number_24x32.png` — 0~9 가로 시트.
-- (나중에) `explosion.png`, `levelup.png` 같은 strip.
