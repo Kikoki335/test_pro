@@ -1,0 +1,683 @@
+# Sky Blaster — 개발 작업 계획 (Master Plan)
+
+> **이 문서는 작업 재개용 마스터 플랜이다.** 컴퓨터를 껐다 켜거나 Claude 세션이 새로 시작돼도 이 문서만 읽고 다음 작업을 이어갈 수 있도록 작성되었다.
+
+---
+
+## 0. 이 문서를 처음 보는 사람을 위한 안내 (READ FIRST)
+
+### 0.1 읽는 순서
+
+1. **§1** — 무엇을 만드는지 (게임 개요, 더 자세한 시안은 `README.md`)
+2. **§2** — **절대 어기지 말 것** (framework cutoff 규칙). 모든 작업의 전제.
+3. **§3** — 어디에 무엇이 있는지 (디렉토리 구조)
+4. **§9** — 지금 어디까지 했고, 다음에 뭘 할지
+5. 다음 작업 sub-task 의 §6 항목 자세히 읽고 시작
+
+### 0.2 한 줄 요약
+
+E:/test 의 Sky Blaster (종스크롤 슈팅 × 로그라이크) 안드로이드 텀프로젝트를 `E:/SmartphoneGame/spgp_2026` (교수님 강의 framework) 의 주차별 진도에 맞춰 만든다. 그 주 cutoff 까지 framework 가 가르친 도구만 쓴다. 새 도구를 안 가르친 주차에는 후속 주차의 화면/UI 작업을 당겨와 채운다. 리소스(그림/사운드)는 7주차에 한꺼번에 처리하므로, 1~6주차는 도형/색 placeholder 로 동작 검증.
+
+### 0.3 이 문서의 역할 분담
+
+| 문서 | 역할 |
+|---|---|
+| `README.md` | 게임 사양, 시안, 원본 8주 일정 (게임 디자인 문서) |
+| `WORK_PLAN.md` (이 문서) | **실제 작업 계획·진척·framework cutoff 규칙** (작업 문서) |
+| `process.md` | (있다면) 과거 진행 로그 |
+| `Homework.md` | spgp_2026 의 과제 자료 (참고용) |
+
+---
+
+## 1. 프로젝트 개요
+
+### 1.1 무엇을 만드는가
+
+- **이름**: Sky Blaster
+- **장르**: 종스크롤 슈팅 × 로그라이크
+- **플랫폼**: Android (Kotlin)
+- **타겟 디바이스**: 가상 좌표계 900×1600 (세로)
+- **핵심 메카닉**: 터치 드래그로 자유 이동, 자동 발사, 적 처치로 EXP 획득 → 레벨업 시 무기·스킬·능력치 3카드 중 선택, 1분마다 보스전 진입 선택, 매 판 다른 빌드 (로그라이크)
+
+### 1.2 정량 목표 (`README.md` §2)
+
+- Player 1, 일반 적 3종 (자폭/원거리/분열), 보스 1종
+- 무기 3종 (Dual / Triple / Laser), 스킬 3종, 능력치 3종 (데미지/공속/치명) — 총 9~10 종 보상
+- 배경 2종 (스크롤 배경 + 구름 parallax), 이펙트 10종+, BGM 2종
+
+### 1.3 기간
+
+8주, 2026-04-06 시작 ~ 2026-05-31 종료. 현재 1주차 진행 중 (sub-task #1, #2, #3 완료, 2026-05-01 기준).
+
+---
+
+## 2. 핵심 규칙 (절대 깨지 말 것)
+
+### 2.1 framework cutoff
+
+> **`E:/SmartphoneGame/spgp_2026` 의 커밋을 7일 단위로 끊어서 그 주의 framework 진도로 본다. cutoff 은 누적이다 — N주차 작업은 N주차 cutoff 까지의 모든 커밋(이전 주차 포함)을 자유롭게 활용할 수 있다.**
+
+| 주차 | spgp_2026 cutoff (누적) | 그 주에 새로 도입된 framework |
+|---|---|---|
+| 1주차 | ~ 2026-04-10 | a2dg 거의 전부, `VertScrollBackground` (cutoff commit `9e232ab` on 4/9) |
+| 2주차 | ~ 2026-04-17 | 구름(2번째 배경), `Scene.clipRect`, `screenOrientation`+`appCategory` |
+| 3주차 | ~ 2026-04-24 | (없음 — 0건) |
+| 4주차 | ~ 2026-05-01 | `SheetSprite`, `MapObject` 공통 부모, Registry 패턴 |
+| 5주차 이후 | 동일하게 7일씩 늘려 잡음 — 그 시점에 다시 산정 | TBD |
+
+예: 2주차 작업에서는 `VertScrollBackground` (1주차 도입) 도 당연히 쓰고, 거기에 구름 두 번째 레이어 (2주차 신규) 를 얹는다. 3주차 sub-task 도 1·2주차 framework 모두 사용 가능. §6 의 "주차별 framework 추가 항목" 표는 **그 주에 새로 추가된 것** 만 보여 주므로, 사용 가능한 도구 풀은 항상 그 주 cutoff 까지의 누적값이다.
+
+### 2.2 작업 시 4대 원칙
+
+1. **그 주 cutoff 까지의 spgp_2026 커밋(이전 주차 포함, 누적)만 본다.** 그 cutoff 이후의 framework 는 사용 금지. 작업 시작 전 `git log --until=<해당주차_cutoff+1일> ...` 로 그 시점까지 누적된 framework 도입 항목을 확인.
+2. **framework 가 가르친 패턴/클래스/유틸을 활용하는 것이 우선.** DragonFlight (1~3주차 reference) / CookieRun (4주차~ reference) 의 같은 시점 코드를 보고 그대로 응용. 2주차에 1주차 도구를 다시 써도 OK (오히려 자연스러움).
+3. **새로운 방식 도입 시 확실한 이유 필요** — §8 표에 사유 추가. 사유 예: 게임 사양상 불가피 (예: Sky Blaster Player 는 X+Y 자유 이동, DragonFlight 는 좌우만), 장르 차이.
+4. **같은 주차 안에서 sub-task 분리 시에도 그 주 cutoff 까지의 누적 framework 만 사용.** 즉 1주차 sub-task 들은 모두 4/10 까지의 framework 안에서, 2주차 sub-task 들은 모두 4/17 까지의 framework 안에서 만든다.
+5. **Scene 작업과 Character/Object 작업은 별도 sub-task 로 분리한다.** 한 sub-task = 한 commit = 한 가지 주제. 예: "배경 적용" 과 "Player 등장+이동" 은 두 sub-task. "보스 클래스 추가" 와 "보스 Scene 전환 흐름" 도 두 sub-task. 같은 commit 에 화면 구조 변경과 신규 게임오브젝트가 섞이면 git 히스토리·리뷰·롤백이 어려워짐. 분리 가능한지 애매할 때는 분리하는 쪽으로 기운다.
+
+### 2.3 리소스 수집 미룸
+
+1주차 README 에 "리소스 수집"이 명시돼 있지만 **7주차로 미룬다.** 1~6주차는 도형/색 placeholder 로 동작 검증. 7주차에 그래픽/사운드/이펙트를 한꺼번에 폴리싱.
+
+### 2.4 당김/미룸 가능
+
+framework 추가가 적은 주차나 효율상 좋을 때 후속 주차 작업을 당겨와도 된다. 그러나 §7 표에 이유 명시. 절대 §2.1 cutoff 를 어기지는 않는다.
+
+### 2.5 placeholder 컨벤션
+
+- **Player**: 파란 삼각 (`#3B82F6`), 한 변 약 80px
+- **Bullet (Player)**: 노란 작은 사각 (`#FACC15`), 12×24px
+- **Enemy 자폭병**: 빨간 원 (`#EF4444`), 지름 70px
+- **Enemy 원거리**: 주황 삼각 (`#F97316`), 한 변 80px (꼭짓점 아래)
+- **Enemy 분열형**: 보라 사각 (`#A855F7`), 60×60px
+- **EXP 구슬**: 초록 작은 원 (`#22C55E`), 지름 20px
+- **배경**: 짙은 남색 그라데이션 또는 단색 (`#0B1B3A`)
+- **HUD HP Gauge**: 빨강 → 초록 (남은 비율 따라)
+- **HUD EXP Gauge**: 파랑
+
+7주차에 위 색/도형을 실제 그래픽으로 한꺼번에 교체.
+
+---
+
+## 3. 디렉토리 구조
+
+```
+E:/test/                                 # 텀프로젝트 작업 디렉토리 (이 프로젝트)
+├── README.md                            # 게임 사양 / 시안
+├── WORK_PLAN.md                         # 이 문서 (작업 마스터 플랜)
+├── process.md                           # 과거 진행 로그 (있을 수 있음)
+├── 01_title.png ~ 06_result.png         # 화면 시안 이미지
+├── settings.gradle.kts                  # rootProject.name = "test_pro", :app, :a2dg
+├── build.gradle.kts                     # 최상위 build (alias plugins only)
+├── gradle.properties / gradle/          # gradle 설정
+├── local.properties                     # sdk.dir (Android SDK 경로) — git 무시
+├── a2dg/                                # 라이브러리 모듈 (framework 사본, 패키지 kr.ac.tukorea.ge.spgp2026.a2dg)
+│   ├── build.gradle.kts                 # android-library plugin
+│   └── src/main/java/.../a2dg/
+│       ├── activity/BaseGameActivity.kt # Activity ↔ GameView 연결, pause/resume frametime
+│       ├── view/
+│       │   ├── GameView.kt              # CustomView, doFrame(), Scene 호출, 디버그 grid/info/graph
+│       │   ├── GameContext.kt           # frameTime, sceneStack, metrics, resources 묶음
+│       │   └── GameMetrics.kt           # 가상 좌표계 900×1600, transform/inverseTransform
+│       ├── scene/
+│       │   ├── Scene.kt                 # 추상 Scene, world?, onTouchEvent, push/pop, onBackPressed
+│       │   ├── World.kt                 # World<TLayer>, Layer enum 별 게임오브젝트 컨테이너 + recycleBin
+│       │   └── SceneStack.kt            # push/pop/change
+│       ├── objects/
+│       │   ├── IGameObject.kt           # update / draw 인터페이스
+│       │   ├── IRecyclable.kt           # onRecycle() — World.obtain<T>() 풀에 들어가기 전 정리
+│       │   ├── IBoxCollidable.kt        # collisionRect: RectF + collidesWith(other)
+│       │   ├── Sprite.kt                # bitmap + dstRect, public 함수, 비율 유지 center helper
+│       │   ├── AnimSprite.kt            # 프레임 애니메이션
+│       │   ├── JoyStick.kt              # 가상 조이스틱 (Sky Blaster 안 씀, framework 1주차 도구)
+│       │   ├── ImageNumber.kt           # 폰트 시트 기반 숫자 (7주차에 사용 예정)
+│       │   └── VertScrollBackground.kt  # 종스크롤 배경 (4/9 도입)
+│       ├── util/
+│       │   ├── Gauge.kt                 # 가로 막대 게이지 (HP/EXP)
+│       │   └── LabelUtil.kt             # Paint 기반 텍스트 라벨
+│       └── res/
+│           ├── BitmapPool.kt
+│           └── GameResources.kt
+└── app/                                 # 앱 모듈 (Sky Blaster 본체, 패키지 com.example.smartphonetermproject)
+    ├── build.gradle.kts                 # viewBinding + buildConfig 켬, :a2dg 의존
+    └── src/main/
+        ├── AndroidManifest.xml          # MainActivity (LAUNCHER) + SkyBlasterActivity
+        ├── java/com/example/smartphonetermproject/
+        │   ├── MainActivity.kt          # XML 시작화면, GAME START 클릭 → SkyBlasterActivity
+        │   ├── SkyBlasterActivity.kt    # extends BaseGameActivity, debug 플래그, createRootScene → MainScene
+        │   └── MainScene.kt             # Layer enum + World — 현재 빈 World
+        └── res/
+            ├── layout/activity_main.xml # 시작화면 (남색 배경 + Sky Blaster TextView + GAME START 버튼)
+            ├── values/strings.xml       # app_name="Sky Blaster", start_sky_blaster="GAME START"
+            ├── values/themes.xml
+            ├── values-night/themes.xml
+            ├── mipmap-*                 # 기본 아이콘
+            └── xml/                     # backup_rules, data_extraction_rules
+```
+
+---
+
+## 4. 빌드 / 실행 환경
+
+### 4.1 빌드 명령
+
+```powershell
+# JAVA_HOME 이 설정 안 돼 있으면 (Windows, Android Studio 의 JBR 사용)
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+
+# debug APK 빌드
+& "E:\test\gradlew.bat" :app:assembleDebug --no-daemon
+
+# 또는 bash 에서
+cd /e/test && JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew :app:assembleDebug
+```
+
+### 4.2 가상 좌표계
+
+- 기본 900×1600 (`a2dg/.../view/GameMetrics.kt:8-9`). 세로형.
+- 화면 비율 안 맞으면 letterbox 처리. 좌표는 항상 가상 좌표계 기준으로 작업.
+
+### 4.3 디버그 플래그 (현재값)
+
+`SkyBlasterActivity.kt`:
+```kotlin
+override val drawsDebugGrid = false                  // 빨간 테두리 + 회색 격자 (끔)
+override val drawsDebugInfo = BuildConfig.DEBUG      // 좌상단 "0 [], FPS: 60.0" (debug 빌드에서 켬)
+override val drawsFpsGraph = false                   // 마젠타 FPS 그래프 (끔)
+```
+
+성능 점검 필요할 때만 `drawsFpsGraph = BuildConfig.DEBUG` 로 잠시 켰다 끄기.
+
+### 4.4 자동 진입 (없음)
+
+DragonFlight 의 `MainActivity` 는 debug 빌드에서 1초 후 자동 진입했지만, **Sky Blaster 는 의도적으로 제거.** 무조건 GAME START 버튼 클릭으로만 진입. (사용자 요청, 시작 흐름 직접 검증용)
+
+---
+
+## 5. 참조 위치
+
+### 5.1 framework 디렉토리
+
+- **1~3주차 framework reference**: `E:/SmartphoneGame/spgp_2026/andprj/DragonFlight`
+- **4주차~ framework reference**: `E:/SmartphoneGame/spgp_2026/andprj/CookieRun`
+- **a2dg 사본 (이 프로젝트용)**: `E:/test/a2dg/src` — framework 와 같은 패키지 경로 `kr.ac.tukorea.ge.spgp2026.a2dg`. 새 framework 도입 시 a2dg 도 같이 갱신.
+
+### 5.2 자주 쓰는 git 명령
+
+```bash
+cd E:/SmartphoneGame/spgp_2026
+
+# 그 주 cutoff 까지 누적된 모든 commit (이전 주차 포함)
+git log --until=2026-04-11 --pretty=format:"%h %ad %s" --date=short    # 1주차 (~4/10)
+git log --until=2026-04-18 --pretty=format:"%h %ad %s" --date=short    # 2주차 (~4/17, 1주차 commit 도 포함됨)
+git log --until=2026-04-25 --pretty=format:"%h %ad %s" --date=short    # 3주차 (~4/24)
+git log --until=2026-05-02 --pretty=format:"%h %ad %s" --date=short    # 4주차 (~5/1)
+
+# 그 주에 새로 추가된 commit 만 보고 싶으면 (--since/--until 둘 다)
+git log --since=2026-04-11 --until=2026-04-18 --pretty=format:"%h %ad %s" --date=short    # 2주차 신규
+
+# 그 시점 reference 파일 보기
+git show 9e232ab:andprj/DragonFlight/app/src/main/java/kr/ac/tukorea/ge/spgp2026/dragonflight/MainScene.kt
+
+# 특정 파일 history
+git log --pretty=format:"%h %ad %s" --date=short -- andprj/DragonFlight/app/src/main/java/.../MainScene.kt
+```
+
+---
+
+## 6. 주차별 framework 추가 항목 (그 주에 신규 도입된 것만)
+
+> 표는 **그 주에 새로 추가된 framework 만** 나열한다. 실제로 N주차 작업에서 사용 가능한 도구 풀은 §2.1 의 누적 cutoff 까지 — 1주차 도구도 2주차에서 다시 쓰고, 1·2주차 도구를 3·4주차에서도 쓴다.
+
+### 1주차 (~4/10) — BIG
+
+a2dg 핵심 거의 전부:
+
+| commit | 날짜 | 도구 |
+|---|---|---|
+| (~4/2) | 4/2 | `MainScene` enum Layer 패턴 (`4ee7be7`), JoyStick → Player 직접 처리 (`1c45154`), Enemy/Bullet/EnemyGenerator/CollisionChecker 기본 클래스들 (`86321b2`, `4e4bc48`, `f67c1e9`, `c5291c8`) |
+| (~4/3) | 4/3 | `IBoxCollidable` + `collidesWith` (`8bde3e8`), World collision box debug draw (`fc58c0f`), `Gauge` (`15ed809`), Enemy life Gauge (`be491bf`), `LabelUtil` (`b1128b6`, `00e203a`), `ImageNumber` (`beaf932`), ScoreNumber → ImageNumber (`5994ce2`) |
+| `4001b16` | 4/4 | World update/draw iterator-free |
+| `336bfec`, `223da6d` | 4/4 | `IRecyclable` + World recycle bin |
+| `3008ca4`, `120ff73` | 4/4 | Bullet/Enemy 재활용 패턴 |
+| `aaccf28` | 4/4 | Activity pause/resume frametime 끊기 |
+| `b0d963a` | 4/5 | Background Sprite 도입 |
+| `a916361` | 4/9 | Sprite 비율 유지 center helper |
+| `91f4fb0` | 4/9 | a2dg `VertScrollBackground` 공통 클래스 |
+| `adf8a99` | 4/9 | VertScrollBackground 자동 스크롤 |
+| `29c42a1`, `bad4f9a`, `9e232ab` | 4/9 | DragonFlight ForestBackground 적용 → MainScene 직접 사용 |
+
+### 2주차 (~4/17, 누적) — SMALL (그 주 신규 3건)
+
+| commit | 날짜 | 도구 |
+|---|---|---|
+| `5a2126b` | 4/13 | DragonFlight 구름 배경 레이어 추가 (두 번째 VertScrollBackground) |
+| `f5b4c4f` | 4/13 | README 에 세로 스크롤 background 일반화 단계 반영 |
+| `7867d49` | 4/13 | 게임 Activity `screenOrientation="nosensor"` + `appCategory="game"` |
+| `3300abc` | 4/13 | a2dg `Scene.clipRect` 지원 |
+| `10492d7` | 4/13 | DragonFlight MainScene clipRect 적용 |
+
+### 3주차 (~4/24, 누적) — NONE (그 주 신규 framework 추가 0건, 1·2주차 도구는 모두 사용 가능)
+
+이 주차에는 framework 가 새 도구를 추가하지 않았다. → 새 시스템 도입 근거 없음. 1주차에 깐 SceneStack 위에서 화면 (Title/Pause/Result) 만 추가하는 작업으로 채움 (7주차에서 당겨옴, §7).
+
+### 4주차 (~5/1, 누적) — MEDIUM (CookieRun 으로 옮겨감)
+
+framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임으로 이동. CookieRun 작업이지만 도구는 Sky Blaster 에 응용 가능:
+
+| commit | 날짜 | 도구 |
+|---|---|---|
+| `f1ecc5e` ~ `e14f6fa` | 4/25 | CookieRun 프로젝트 셋업 (가로 좌표 1600×900) |
+| `1fe8b97`, `39e53f5` | 4/25 | a2dg `HorzScrollBackground` (Sky Blaster 직접 사용 X — 종스크롤이라) |
+| `884b231` | 4/25 | a2dg Sprite 함수 public 화 |
+| `c59b15b` | 4/25 | Layer 를 Int 대신 enum 으로 (이미 1주차 DragonFlight 에서 도입돼 있던 패턴 재정리) |
+| `e81b3e2`, `eab58bf` | 4/25 | AnimSprite gctx protected, 기반 정리 |
+| `0880c18`, `f742515`, `0439834`, `64fcbb4` | 4/25 | **`SheetSprite`** — 상태별 프레임 시트 ⭐ |
+| `f286fb5`, `e29f663` | 4/25 | Player 상태별 Sprite Sheet (RUN/JUMP) |
+| `ddf9e9e`, `68c6e37` | 4/28 | **`MapObject` 공통 부모** — 다양한 spawned 객체 통합 ⭐ |
+| `e11c251`, `48140b0` | 4/28 | MapObject/JellyItem 재활용 + Floor Factory |
+| `75e3e48`, `5da3e08`, `1c44448` | 4/28 | MapLoader + World 주입 + 매 프레임 spawn |
+| `2c289af`, `cadaa26`, `9ddc3eb` | 4/28 | 충돌 박스 inset 등 정리 |
+| `b8493b2`, `30ae0dd`, `bccb9cc` | 4/28 | Player FALL/착지 (Sky Blaster 안 씀) |
+| `ca4171b`, `363e746`, `9181006` | 4/28 | 특수 젤리 → Player 효과 (Magnification) |
+| `327c170`, `e55bce8` | 4/28 | MapLoader 가 stage text 파일 로드 + stage 선택 (Sky Blaster 안 씀) |
+| `11d0aa7` | 4/28 | MapLoader 진행률 Gauge |
+| `8017a48` | 4/29 | **`MapObject` 생성 규칙을 Registry 로 분리** ⭐ |
+| `850147d` | 4/29 | 기본 Obstacle stage 에서 생성 |
+
+**Sky Blaster 로 가져올 핵심 (§7 4주차 sub-task 참조):**
+- `SheetSprite` — Player/Enemy 상태 애니메이션 (단, 1주차에는 placeholder 라 미사용)
+- `MapObject` 공통 부모 + Registry 패턴 — EXP 구슬 / 무기 / 보상 카드 종류 관리에 응용
+
+### 5~8주차 — TBD
+
+해당 주차 진입 시점에 spgp_2026 커밋 다시 끊어서 본 문서 §6, §7 갱신.
+
+---
+
+## 7. 주차별 sub-task 분리안
+
+각 sub-task 는 1 commit (사용자의 텀프로젝트 repo 기준). 주당 3~7 commit 범위.
+
+### 1주차 (~4/10) — 6 commits
+
+#### [x] #1 — 타이틀 → GAME START → 빈 게임 화면 *(완료, 2026-05-01)*
+
+- **활용 framework**: `BaseGameActivity` (4/4), `GameView`/`Scene`/`World<TLayer>` (~4/2), Layer enum (4/2), DragonFlight `MainActivity` 패턴
+- **만든 것**:
+  - `app/build.gradle.kts` — `viewBinding = true`, `buildConfig = true` 추가
+  - `AndroidManifest.xml` — `SkyBlasterActivity` 등록 (orientation 잠금은 4/13 framework 라 미룸)
+  - `SkyBlasterActivity.kt` — `BaseGameActivity` 상속, debug 플래그 주입, `createRootScene()` → `MainScene`
+  - `MainScene.kt` — Layer enum (BACKGROUND, PLAYER, BULLET, ENEMY, CONTROLLER, UI), 빈 `World`
+  - `MainActivity.kt` — `ActivityMainBinding`, GAME START 버튼 클릭 시 `SkyBlasterActivity` Intent (자동 진입 없음)
+  - `activity_main.xml` — 남색 배경, "Sky Blaster" TextView, GAME START Button
+  - `strings.xml` — `app_name`, `start_sky_blaster`
+- **기준 동작**: 앱 실행 시 타이틀 화면, GAME START 누르면 빈 게임 화면 (좌상단 FPS 숫자만), 뒤로가기로 타이틀 복귀
+- **빌드 확인**: `gradlew :app:assembleDebug` 성공
+
+#### [x] #2 — VertScrollBackground 종스크롤 배경 *(완료, 2026-05-01)*
+
+- **활용 framework**:
+  - `VertScrollBackground` (`a2dg/.../objects/VertScrollBackground.kt`, 4/9 도입 — `91f4fb0` 클래스 + `adf8a99` 자동 스크롤)
+  - `Sprite` 비율 유지 center helper (4/9 `a916361`)
+  - DragonFlight reference: `git show 9e232ab:andprj/DragonFlight/app/src/main/java/.../MainScene.kt` 의 `private val background = VertScrollBackground(gctx, R.mipmap.df_bg, BACKGROUND_SPEED)` 패턴
+- **만든 것**:
+  - `app/src/main/res/mipmap-xxxhdpi/sky_bg.png` (900×1600 짙은 남색 + 별 점 placeholder)
+  - `MainScene.kt` 에 `private val background = VertScrollBackground(gctx, R.mipmap.sky_bg, BACKGROUND_SPEED)` 추가, `BACKGROUND_SPEED = 80f`, `world.add(background, Layer.BACKGROUND)`
+- **기준 동작**: 게임 화면 진입 시 배경이 위→아래로 자동 스크롤
+- **placeholder 색**: §2.5 참조
+
+#### [x] #3 — Player 클래스 + 터치 드래그 이동 *(완료, 2026-05-01)*
+
+- **활용 framework**:
+  - `Sprite` (`a2dg/.../objects/Sprite.kt`, public 함수, `syncDstRect` 패턴)
+  - Player 가 직접 `onTouchEvent` 처리 패턴 (4/2 `1c45154`) — 단, DragonFlight 는 좌우만, Sky Blaster 는 X+Y
+  - `gctx.metrics.fromScreen(...)` 으로 화면 좌표 → 가상 좌표 변환
+  - DragonFlight reference: `git show 9e232ab:andprj/DragonFlight/app/src/main/java/.../Player.kt` (`targetX` + `coerceIn` 패턴)
+- **만든 것**:
+  - `app/src/main/res/mipmap-xxxhdpi/player_placeholder.png` (160×160 파란 삼각형 placeholder)
+  - `app/.../Player.kt` — `Sprite(R.mipmap.player_placeholder)` 상속, 100×100, 시작 `(450, 1450)`. `targetX/Y` + `hypot` 거리 기반 SPEED 1500f 보간. `onTouchEvent(ACTION_DOWN/MOVE)` 에서 `metrics.fromScreen` → `targetX/Y` 갱신, 화면 경계 clamp.
+  - `MainScene.kt` 에 `private val player = Player(gctx)` 추가, `world.add(player, Layer.PLAYER)`, `onTouchEvent(event)` 를 `player.onTouchEvent(event)` 로 위임
+- **기준 동작**:
+  - 화면 어디든 터치/드래그하면 Player 가 그 위치로 따라옴 (X+Y 자유 이동)
+  - Player 는 가상 좌표계 경계 (50~850, 50~1550) 안에 머무름
+- **placeholder 색**: §2.5 — 파란 삼각
+
+#### [ ] #4 — Player 자동 발사 + Bullet (Recyclable + ObjectPool)
+
+- **활용 framework**:
+  - `IRecyclable` (4/4 336bfec) + `World.obtain<T>(clazz)` 풀 (4/4 223da6d)
+  - `World.add(bullet, BULLET)` 동적 추가 / `bullet.update()` 안에서 화면 밖이면 self-remove 패턴
+  - DragonFlight Bullet (4/2 86321b2 시점 → 4/4 3008ca4 재활용 패턴 적용 후) 참조: `git show 9e232ab:andprj/DragonFlight/app/src/main/java/.../Bullet.kt`
+- **만들 것**:
+  - `app/.../Bullet.kt` — `IRecyclable`, 노란 작은 사각 placeholder. 멤버: `x, y, speed=1500f` (위로). `update()` 에서 `y -= speed * gctx.frameTime`, 화면 위로 벗어나면 `gctx.sceneStack.top?.world?.remove(this, MainScene.Layer.BULLET)`. `init(x, y)` 로 풀에서 꺼낸 후 재초기화. `onRecycle()` 에서 상태 리셋.
+  - `Player.kt` 에 자동 발사 — `private var fireCooldown = 0f; private val FIRE_INTERVAL = 0.3f`. `update()` 에서 `fireCooldown -= gctx.frameTime`. `<= 0` 이면 발사 후 `fireCooldown = FIRE_INTERVAL`. 발사 = `world.obtain(Bullet::class.java)?.apply { init(playerX, playerY) } ?: Bullet(gctx).apply { init(playerX, playerY) }` 그리고 `world.add(bullet, BULLET)`.
+- **기준 동작**:
+  - Player 가 0.3초 간격으로 위로 노란 Bullet 발사
+  - 화면 밖 Bullet 은 새로 만들지 않고 재활용 (디버그 정보의 layer counts 가 안정적으로 유지되는지 확인)
+- **참고**: Player 가 Bullet 을 만들 때 World 참조가 필요. `Player(gctx)` 가 gctx 만 받으니 `gctx.sceneStack.top?.world` 로 접근하거나, MainScene 이 Player 에 `world` 를 주입. DragonFlight 는 후자 패턴.
+
+#### [ ] #5 — Enemy 3종 + EnemyGenerator (`CONTROLLER` layer)
+
+- **활용 framework**:
+  - DragonFlight `Enemy` (4/2 4e4bc48 → 4/3 IBoxCollidable + Gauge 적용 → 4/4 IRecyclable) 참조
+  - `EnemyGenerator` (4/2 f67c1e9) — `IGameObject`, update 마다 시간 누적해서 spawn
+  - `CONTROLLER` layer 에 EnemyGenerator 배치 (화면에 안 그려지지만 update 받음)
+- **만들 것**:
+  - `app/.../Enemy.kt` — `IRecyclable`. enum `Type { SUICIDE, RANGED, SPLIT }`. type 따라 placeholder 색/모양/HP/속도 다름:
+    - SUICIDE: 빨간 원, HP 1, 속도 빠름 (400f), 1주차에는 단순 하강 (자폭 동작은 5주차 추가)
+    - RANGED: 주황 삼각, HP 2, 속도 느림 (200f), 1주차에는 단순 하강 (탄환 발사는 5주차 추가)
+    - SPLIT: 보라 사각, HP 3, 속도 중간 (300f), 1주차에는 단순 하강 (분열은 5주차 추가)
+  - `update()` 에서 `y += speed * frameTime`, 화면 밖이면 self-remove
+  - `app/.../EnemyGenerator.kt` — `IGameObject`. `update()` 에서 `time += frameTime`, 일정 간격 (예 1.0초) 지나면 spawn:
+    ```kotlin
+    val type = Enemy.Type.entries.random()
+    val x = Random.nextFloat() * 900f
+    val enemy = world.obtain(Enemy::class.java) ?: Enemy(gctx)
+    enemy.init(x, -50f, type)
+    world.add(enemy, MainScene.Layer.ENEMY)
+    ```
+- **기준 동작**:
+  - 위에서 1초 간격으로 3종 중 랜덤 적이 내려옴
+  - 화면 아래로 빠진 Enemy 는 재활용
+
+#### [ ] #6 — 충돌 (Bullet↔Enemy, Player↔Enemy) + HUD (HP Gauge + Score)
+
+- **활용 framework**:
+  - `IBoxCollidable` (4/3 8bde3e8) + `collidesWith`
+  - DragonFlight `CollisionChecker` (4/3 c5291c8) 참조 — `World.objectsAt(layer)` 또는 `forEachReversedAt` 으로 양 layer 순회
+  - `Gauge` (4/3 15ed809) — Player HP 표시
+  - 점수: 일단 `LabelUtil` (텍스트). 7주차에 `ImageNumber` 로 교체 예정
+- **만들 것**:
+  - `Player`, `Bullet`, `Enemy` 가 `IBoxCollidable` 구현 — `collisionRect: RectF` 필드 추가하고 `update()` 에서 갱신
+  - `app/.../CollisionChecker.kt` — `IGameObject`, `CONTROLLER` layer. update 마다 BULLET 과 ENEMY 순회 (둘 다 reverse 로 안전하게), 충돌하면 Enemy.takeDamage(1), Bullet self-remove. PLAYER 와 ENEMY 도 비교 — 부딪히면 Player.life -= 1, Enemy self-remove.
+  - `Player` 에 `life: Int = 5`, `gauge: Gauge`. 화면 하단에 HP gauge 그리기 (Player.draw 에서 직접 또는 별도 HUD 객체).
+  - 점수: `MainScene` 에 `var score = 0`. Enemy 처치 시 점수 가산. `LabelUtil` 으로 화면 상단에 "Score: 1234" 표시 — 별도 `Score` 객체 만들어 `UI` layer 에 배치.
+  - Player.life ≤ 0 이면 일단 Activity finish (3주차에 Result Scene 으로 교체 예정).
+- **기준 동작**:
+  - Bullet 이 Enemy 에 닿으면 Enemy HP 깎이고 0 되면 사라짐, 점수 +10
+  - Player 가 Enemy 에 닿으면 HP 깎임, Enemy 사라짐
+  - 하단 HP gauge 가 줄어들고, 0 되면 게임 종료 (앱 종료)
+  - 상단에 점수 표시
+- **1주차 종료 후 게임 한 사이클**: 배경 흐름 + Player 자유 이동 + 자동 발사 + 적 spawn + 충돌 + 점수/HP 변동.
+
+### 2주차 (~4/17, 누적) — 3 commits
+
+#### [ ] #1 — 구름 parallax 레이어
+
+- **활용**: 두 번째 `VertScrollBackground` (4/13 5a2126b 패턴), `CLOUD` Layer 추가 (`MainScene.Layer` enum 에 추가; DragonFlight 4/13 시점 enum 에 CLOUD 가 PLAYER/BULLET 사이에 들어가 있음 — 게임 가독성에 맞게 배치)
+- placeholder: 흰색 반투명 구름 비트맵 (단순 흰 원 패턴), 배경보다 빠른 속도 (예 background=80f, clouds=120f) 로 parallax
+- DragonFlight reference: `git show 10492d7:andprj/DragonFlight/app/src/main/java/.../MainScene.kt`
+
+#### [ ] #2 — Scene.clipRect + AndroidManifest 정리
+
+- **활용**: `Scene.clipsRect = true` (4/13 3300abc, 10492d7), `screenOrientation="nosensor"`+`appCategory="game"` (4/13 7867d49)
+- `MainScene` 에 `override val clipsRect = true` 한 줄 추가
+- AndroidManifest 의 SkyBlasterActivity 에 `android:screenOrientation="nosensor"` 추가, application 에 `android:appCategory="game"` 추가
+- 4주차 framework 에서 minSdk 24 인지 26 인지 확인 — `appCategory` 는 API 26+ 에서 동작. 현재 minSdk 24 라 lint 경고 가능, 동작상 문제는 없음
+
+#### [ ] #3 — HUD 자리 잡기
+
+- 상단 점수 위치 정리 (1주차에 만든 Score 위치 미세조정)
+- 보스 진입 타이머 자리 (실제 카운트다운은 5주차) — 단순히 "01:00" 텍스트 placeholder
+- Player HP gauge 위치 정리 (Player 자체에 붙이지 말고 별도 HUD 객체로 분리해 화면 하단 고정 위치)
+
+### 3주차 (~4/24, 누적) — 4 commits *(7주차 화면 작업 당겨옴)*
+
+framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack 위에서 화면만 추가.
+
+#### [ ] #1 — Title Scene 다듬기
+
+- 옵션 A: 현재 XML `MainActivity` 유지하고 디자인만 정리 (배경 색조, 버튼 위치, 깜빡이는 별 효과 등)
+- 옵션 B: XML 시작화면을 게임 내 `TitleScene` (Scene 상속) 으로 교체 — `MainActivity` 는 단순 컨테이너, `BaseGameActivity` 가 처음부터 `TitleScene` 을 root scene 으로 push, GAME START 클릭 시 `MainScene.change()`
+- 권장: 옵션 A (XML 유지) — 옵션 B 는 4주차 이후 화면 전환이 많아질 때 검토. 옵션 A 가 framework 패턴 (DragonFlight 도 XML MainActivity)
+
+#### [ ] #2 — Pause Scene (반투명 overlay)
+
+- `PauseScene : Scene(gctx)` — `world` 없이 `update`/`draw` 직접 override. `draw` 에서 반투명 검정 사각 (`canvas.drawColor(0x80000000.toInt())`) 위에 Resume / Restart / Quit 버튼 (텍스트로) 그리기
+- `MainScene.onBackPressed()` 에서 `PauseScene(gctx).push()` — Scene.kt 의 기본 구현은 pop 이므로 override 필요
+- Pause Scene 이 active 일 때 MainScene 의 update 는 stack top 만 update 받으므로 자연히 멈춤
+
+#### [ ] #3 — Result Scene 골격
+
+- `ResultScene : Scene(gctx)` — GAME OVER / BOSS CLEAR 텍스트, 점수·플레이 시간 표시. Retry → MainScene change, Title → MainActivity 로 finish
+
+#### [ ] #4 — Scene 전환 흐름 정리
+
+- Player.life ≤ 0 → `gctx.sceneStack.change(ResultScene(gctx, isWin = false, score, playTime))`
+- Pause Scene 의 Restart → `gctx.sceneStack.change(MainScene(gctx))` (현재 Pause 와 그 아래 MainScene 둘 다 교체)
+- Pause Scene 의 Quit → 전부 pop 해서 Activity finish
+
+### 4주차 (~5/1, 누적) — 6 commits *(5주차 일부 당김)*
+
+#### [ ] #1 — EXP 구슬 클래스
+
+- **활용**: `MapObject` 공통 부모 패턴 (4/28 ddf9e9e, 68c6e37) — Sky Blaster 식으로 응용. 또는 단순히 `IRecyclable` + 자동 흡수 로직만 구현해도 OK
+- placeholder: 초록 작은 원
+- 자동 흡수: Player 와의 거리 < 200px 이면 Player 쪽으로 lerp 이동, 충돌 (collisionRect) 시 흡수되어 사라짐 + Player.exp 증가
+
+#### [ ] #2 — Player 레벨/EXP Gauge + 보스 진입 타이머 (5주차에서 당김)
+
+- 상단 HUD 에 레벨 텍스트 + EXP gauge (파랑) + 보스 진입까지 타이머
+- exp 가 maxExp 도달하면 다음 sub-task 로 트리거 (이번 sub-task 에서는 표시까지)
+
+#### [ ] #3 — 레벨업 보상 카드 Scene
+
+- `LevelUpScene : Scene(gctx)` — 반투명 overlay, 가운데 카드 3장. 카드 종류 = (Weapon, Skill, Stat) 중 무작위 3개
+- `MainScene.update()` 에서 Player.exp ≥ maxExp 면 `LevelUpScene(gctx, [card1, card2, card3]).push()`
+- 카드 클릭 시 보상 적용 후 pop
+
+#### [ ] #4 — 무기 시스템 베이스 (Weapon Registry) + Dual Shot
+
+- **활용**: `MapObject` Registry 패턴 (4/29 8017a48) 응용. `object WeaponRegistry { val all = listOf(DualShot, ...); fun random3() = ... }`
+- 각 Weapon 은 `fire(player, world)` 함수로 Bullet 생성 패턴 다르게 (Dual = 2발, Triple = 3발, Laser = 긴 직선)
+- 1주차 의 자동 발사를 `currentWeapon.fire(...)` 로 교체
+
+#### [ ] #5 — Triple Shot + Laser
+
+- WeaponRegistry 에 추가
+- 보상 카드에서 선택 가능
+
+#### [ ] #6 — 능력치 증가 (5주차에서 당김)
+
+- Stat (데미지/공속/치명) 보상 카드에 추가. Player 멤버 `damageMul`, `fireRateMul`, `critRate`. Bullet 생성 시 / 데미지 계산 시 곱셈 적용
+
+### 5주차 (~5/8, 누적) — 4 commits *(framework 진도 재확인 후 조정)*
+
+#### [ ] #1 — 스킬 베이스 (터치 발동) + Skill Registry
+
+#### [ ] #2 — 스킬 1: Shield Burst
+
+#### [ ] #3 — 스킬 2: Homing Missile
+
+#### [ ] #4 — 보스 진입 선택 Scene
+
+### 6주차 (~5/15, 누적) — 7 commits
+
+#### [ ] #1 — 보스 클래스 (Character: HP, 기본 위치, placeholder 도형)
+
+#### [ ] #2 — 보스 Scene 진입 흐름 (MainScene → BossScene 전환, WARNING 연출)
+
+#### [ ] #3 — 보스 Bezier 이동
+
+#### [ ] #4 — 보스 패턴 1 (탄막 산개)
+
+#### [ ] #5 — 보스 패턴 2 (돌진/레이저)
+
+#### [ ] #6 — 보스 HP Gauge (HUD 상단)
+
+#### [ ] #7 — 보스 클리어 → Result Scene 전환
+
+### 7주차 (~5/22, 누적) — 7 commits *(리소스 수집 한꺼번에)*
+
+#### [ ] #1 — 그래픽 리소스 수집 + import
+
+- Player/Enemy 3종/Bullet/배경/UI 시트 모음
+- 각 placeholder 색·모양에 맞춘 그림으로 교체
+- `app/src/main/res/mipmap-xxxhdpi/` 에 배치
+
+#### [ ] #2 — SheetSprite 로 Player 상태 애니메이션
+
+#### [ ] #3 — SheetSprite 로 Enemy 종류별 애니메이션
+
+#### [ ] #4 — Frame Animation 이펙트 (피격/폭발/레벨업)
+
+#### [ ] #5 — ImageNumber 로 점수 표시 교체
+
+- 현재 LabelUtil → number_24x32.png 같은 폰트 시트 + ImageNumber
+
+#### [ ] #6 — BGM 2종
+
+#### [ ] #7 — 효과음 (발사/피격/레벨업/클리어)
+
+### 8주차 (~5/29, 누적) — 3 commits
+
+#### [ ] #1 — 버그 라운드업
+
+#### [ ] #2 — 밸런스 조정
+
+#### [ ] #3 — 최종 정리
+
+**총 40 commits** — 1주차 6 + 2주차 3 + 3주차 4 + 4주차 6 + 5주차 4 + 6주차 7 + 7주차 7 + 8주차 3. (Scene 작업과 Character 작업 분리 원칙 §2.2#5 적용)
+
+---
+
+## 8. 당김/미룸 항목 + 이유
+
+### 8.1 작업 시점 이동
+
+| 항목 | 원래 (README §4) | 옮긴 곳 | 이유 |
+|---|---|---|---|
+| 리소스 수집 (그래픽/사운드) | 1주차 | 7주차 | 1주차 framework 가 그림 없이 만들 만큼 풍부. placeholder 도형으로 동작 먼저 검증한 뒤 7주차에 이펙트·BGM 과 함께 폴리싱 묶기 |
+| Player + 배경 + 자동 발사 | 2주차 | 1주차 | 1주차 framework 커밋이 모두 1주차 cutoff 안에 있음 (`VertScrollBackground` 4/9, Player 직접 터치 처리 4/2). 미루면 1주차 backlog 비어 framework 진도와 어긋남 |
+| 적 3종 + 충돌 + Recycle | 3주차 | 1주차 | 위와 동일. `IRecyclable` 4/4, `IBoxCollidable` 4/3, EnemyGenerator 4/2 모두 4/10 cutoff 안 |
+| 타이틀/Pause/Result 화면 | 7주차 | 3주차 | 3주차 framework 추가 0건. 새 시스템 도입 근거 없음 → 1주차에 깐 SceneStack 위에 화면만 올리는 작업으로 채움 |
+| 능력치 증가 (데미지/공속/치명) | 5주차 | 4주차 | 단순 변수 곱셈. 4주차 Registry 패턴으로 보상 카드 종류만 추가하면 같은 framework 사용 |
+| 보스 진입 타이머 UI 자리 | 5주차 | 4주차(자리), 5주차(동작), 6주차(실제 진입) | UI 자리는 4주차 HUD 작업과 같이, 진입 선택 동작은 5주차, 보스 자체는 6주차 |
+
+### 8.2 DragonFlight 4/10 패턴과 의도적으로 다른 부분
+
+같은 시점 framework 코드와 다르게 가는 모든 곳은 여기에 이유 명시.
+
+| 항목 | DragonFlight 4/10 | Sky Blaster | 이유 |
+|---|---|---|---|
+| Player 이동축 | 좌/우만 (수평 슈팅 단계) | X+Y 자유 이동 | Sky Blaster 는 종스크롤. README §1 "캐릭터를 자유롭게 이동" 명시 |
+| Player HP | 없음 (1격사) | HP 5 + 부딪히면 감소 | Sky Blaster 사양상 자폭병이 부딪혀 데미지 주는 구조. Enemy 의 Gauge 패턴을 Player 에 적용 |
+| Enemy 종류 | 1종 (사망 시 자식 spawn) | 3종 (placeholder 모양·HP·속도만 차이) | 1주차 BIG 이 원래 2+3주차 흡수. 1주차에는 동작 차이 미루고 외형·스탯만 분리, 5주차에 자폭/원거리/분열 동작 추가 |
+| 점수 표시 | `ImageNumber` + `number_24x32.png` | 일단 `LabelUtil` (텍스트) | 1주차 리소스 수집 제외. 폰트 시트 들어오면 7주차에 `ImageNumber` 로 교체 (7주차 sub-task #5) |
+| 배경 | DragonFlight 이미지 (`df_bg.png`) | placeholder 색/단순 비트맵 | 같은 리소스 수집 제외 규칙 |
+| 입력 시작점 | JoyStick → Player 직접 처리로 진화 | 처음부터 Player 직접 처리 | 4/10 시점 framework 가 이미 도달한 최종형(`9e232ab`)을 따라감. 중간 JoyStick 단계는 학습용이라 안 거침 |
+| MainScene Layer 순서 | BACKGROUND, PLAYER, BULLET, ENEMY, CONTROLLER, UI | (1주차 #1 에서 동일하게 맞춤) | framework 와 동일 — Player 가 아래, Bullet/Enemy 가 위에 그려짐 |
+
+---
+
+## 9. 현재 진척
+
+> **마지막 갱신**: 2026-05-01 (1주차 #2 → 배경/Player 두 sub-task 로 분할 후)
+
+### 9.1 완료 / 진행 / 다음
+
+| 상태 | sub-task | 비고 |
+|---|---|---|
+| ✅ 완료 | 1주차 #1 — 타이틀 → 빈 게임 화면 | 빌드 확인됨, GAME START 클릭으로만 진입 |
+| ✅ 완료 | 1주차 #2 — VertScrollBackground 종스크롤 배경 | placeholder `sky_bg.png` (900×1600) |
+| ✅ 완료 | 1주차 #3 — Player 클래스 + 터치 드래그 이동 | placeholder `player_placeholder.png`, X+Y 드래그 follow |
+| ▶ **다음** | **1주차 #4 — Player 자동 발사 + Bullet (Recyclable + ObjectPool)** | §7 1주차 #4 참조 |
+| ⏸ 대기 | 1주차 #5, #6, 그리고 2~8주차 전부 | |
+
+### 9.2 빌드 / 동작 확인 상태
+
+- `gradlew :app:assembleDebug` 성공 (마지막 검증: 2026-05-01)
+- 디버그 옵션: `drawsDebugInfo` 만 켬 (좌상단 FPS 숫자), grid/graph 끔
+- 자동 진입 제거됨 (의도적, §4.4)
+- Layer enum 순서: framework (DragonFlight 4/9) 와 동일
+
+### 9.3 작업 재개 절차 (NEXT TIME I OPEN THIS)
+
+1. 이 문서 §0, §2 다시 읽기
+2. §9.1 의 "다음" sub-task 확인
+3. 그 sub-task 의 §7 항목 자세히 읽기
+4. 작업 시작 전 framework cutoff 확인:
+   ```bash
+   cd E:/SmartphoneGame/spgp_2026
+   git log --until=<해당주차_cutoff+1일> --pretty=format:"%h %ad %s" --date=short | head -30
+   ```
+5. 필요하면 reference 파일 보기:
+   ```bash
+   git show <cutoff_commit>:andprj/DragonFlight/app/src/main/java/.../<file>.kt
+   ```
+6. 작업 진행
+7. 작업 완료 후:
+   - 빌드 확인 (`gradlew :app:assembleDebug`)
+   - **§7 의 해당 sub-task 체크박스 `[ ]` → `[x]` 로 갱신**
+   - **§9.1 "다음" 항목 갱신**
+   - **§9 "마지막 갱신" 날짜 갱신**
+   - 새로운 framework 미사용 패턴 도입했으면 §8.2 표에 이유 추가
+   - DragonFlight reference 와 의도적으로 다르게 간 부분 있으면 §8.2 추가
+
+---
+
+## 10. 게임 디자인 파라미터 (현재 가정값, 조정 가능)
+
+### 10.1 가상 좌표계
+
+- 900 (가로) × 1600 (세로). `GameMetrics.DEFAULT_VIRTUAL_WIDTH/HEIGHT` 기본값.
+- Player 가상 위치 시작: `(450, 1300)` (화면 하단 중앙)
+
+### 10.2 Player
+
+- 크기: **100×100** (placeholder 가시성을 위해 80→100 으로 조정, `Player.PLAYER_WIDTH/HEIGHT`)
+- 시작 위치: `(metrics.width / 2, metrics.height - PLAYER_HEIGHT * 1.5f)` = `(450, 1450)` (화면 하단 중앙)
+- 시작 HP: 5 (Enemy 1마리 부딪히면 1 감소) — 5번 sub-task 에서 도입
+- 이동: framework lerp 패턴 (`targetX/Y`, `SPEED = 1500f` per second). 화면 경계 안에서 clamp.
+- 발사 간격: 0.3초 (FIRE_INTERVAL) — 3번 sub-task 에서 도입
+- Bullet 데미지: 1 (4주차 능력치 곱셈 적용)
+
+### 10.3 Bullet
+
+- 크기: 12×24
+- 속도: 1500f/s (위 방향)
+- 화면 밖이면 self-remove + 풀로 들어감
+
+### 10.4 Enemy 종류별
+
+| 종류 | placeholder | HP | 속도 (아래 방향) | 점수 |
+|---|---|---|---|---|
+| 자폭병 | 빨간 원 70px | 1 | 400f/s | 10 |
+| 원거리 | 주황 삼각 80px | 2 | 200f/s | 20 |
+| 분열형 | 보라 사각 60px | 3 | 300f/s | 30 |
+
+EnemyGenerator: spawn 간격 1.0초 (1주차에는 단순 — 2주차 이후 점진 증가 가능)
+
+### 10.5 Layer 순서 (그리는 순서)
+
+```
+BACKGROUND → PLAYER → BULLET → ENEMY → CONTROLLER (안 그려짐) → UI
+```
+
+DragonFlight 4/10 과 동일. 2주차에 `CLOUD` 가 추가됨 (PLAYER 와 BULLET 사이 또는 PLAYER 다음).
+
+---
+
+## 11. 자주 빠지는 함정
+
+1. **§2 cutoff 어기기** — `clipsRect`, 구름 배경, `screenOrientation` 등을 1주차에 쓰면 안 됨. 2주차 작업.
+2. **placeholder 인데 그림 리소스 찾으려 함** — 1~6주차에는 도형/단색만. 그림은 7주차.
+3. **자동 진입 다시 추가** — DragonFlight `MainActivity` 를 그대로 베끼면 자동 진입 들어옴. Sky Blaster 는 의도적으로 빼 둠.
+4. **Bullet/Enemy 만들 때 풀 안 거침** — 항상 `world.obtain(X::class.java) ?: X(gctx)` 패턴. 안 그러면 GC 부담.
+5. **자기 자신 remove 시 forward iteration 사용** — `World.update` 가 reverse 순회로 안전하게 만들었으니 평소대로 `world.remove(this, layer)` 호출하면 됨.
+6. **새 layer 추가 시 enum 순서 바꿈** — 그리는 순서가 바뀌므로 의도적으로만. CLOUD 가 PLAYER 위인지 아래인지 등.
+7. **`gctx.frameTime` 안 쓰고 상수 속도** — 프레임 변동 시 게임 속도 흔들림. 항상 `value * gctx.frameTime`.
+8. **JAVA_HOME 미설정 시 빌드 실패** — `$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"` 먼저.
+9. **§9 갱신 빠뜨림** — 작업 끝낸 뒤 체크박스/다음 작업 안 바꾸면 다음 세션이 무엇이 됐는지 모름. 항상 갱신.
+10. **`a2dg` 와 framework 어긋남** — framework 가 a2dg 에 새 파일 추가하면 (예: 2주차 `Scene.clipRect` 지원) E:/test/a2dg 에도 같이 옮겨야 함.
+
+---
+
+## 12. 이 문서 갱신 규칙
+
+- 새 framework cutoff 진입 시 §6 (해당 주차 항목) 채우기
+- sub-task 완료 시 §7 체크박스 `[x]`, §9.1 "다음" 항목 갱신, §9 "마지막 갱신" 날짜 변경
+- DragonFlight 와 다른 새 패턴 도입 시 §8.2 표에 추가
+- 게임 디자인 파라미터 변경 시 §10 갱신
+- 새 함정 발견 시 §11 추가
