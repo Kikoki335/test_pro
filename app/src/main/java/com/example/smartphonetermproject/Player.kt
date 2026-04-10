@@ -31,6 +31,15 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder),
     val dead: Boolean
         get() = life <= 0
 
+    // 4주차 #1 — Enemy 사망 시 drop 되는 ExpOrb 를 흡수해 누적. #2 에서 EXP gauge HUD 에 연동되고
+    // #3 에서 maxExp 도달 시 LevelUpScene 트리거한다. 4주차 #1 단계에서는 누적 값까지만.
+    var exp = 0
+        private set
+
+    fun gainExp(amount: Int) {
+        exp += amount
+    }
+
     private val minX = PLAYER_WIDTH / 2f
     private val maxX = gctx.metrics.width - PLAYER_WIDTH / 2f
     private val minY = PLAYER_HEIGHT / 2f

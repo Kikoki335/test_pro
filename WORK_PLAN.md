@@ -550,6 +550,8 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
 
 ### 3주차 (~4/24, 누적) — 5 commits *(Enemy 공격 행동 + VFX — 원래 들어 있던 화면 작업은 7~8주차로 분산 이동, §8.1. VFX 도 7주차에서 당겨옴 — 사용자가 에셋 미리 제공)*
 
+> **commit 분할 단위 (다음 세션이 처음부터 구현 시 따를 것)**: ① SUICIDE (근거리 자폭) → commit, ② RANGED (원거리) → commit, ③ SPLIT (분열 + minion) → commit, ④ VFX (hit + die) → commit, ⑤ EnemyGenerator random 복원 + 밸런스 → commit. 사용자가 명시적으로 결정한 4(+1) commit 구조. 한 commit 안에 두 type 섞지 말 것 — 검증/되돌리기/리뷰가 어려워짐.
+
 framework 추가 0건이므로 새 시스템 도입 X. 1·2주차 누적 도구 (`when type` 분기, `IRecyclable` ObjectPool, `CollisionChecker`, `Layer` enum 확장) 만으로 구현.
 
 SUICIDE → RANGED → SPLIT 순서로 한 종류씩 도입하며 검증. 자폭/원거리/분열 동작이 미완 상태에서 다른 종류가 같이 spawn 되면 무엇이 어디서 깨지는지 분리하기 어렵기 때문에, 각 단계에서 `EnemyGenerator` 는 그 sub-task 에서 작업 중인 종류만 spawn 하도록 임시 수정하고, 마지막 sub-task 에서 random 복원.
@@ -604,37 +606,47 @@ SUICIDE → RANGED → SPLIT 순서로 한 종류씩 도입하며 검증. 자폭
 - 3종 동시 등장 시 spawn 빈도, HP, Player 데미지 시각적 검증하면서 1차 밸런싱 (수치 조정만, 동작 추가 X).
 - 3주차 종료 빌드/플레이 확인.
 
-### 4주차 (~5/1, 누적) — 6 commits *(5주차 일부 당김)*
+### 4주차 (~5/1, 누적) — 5 commits *(5주차 일부 당김)*
 
-#### [ ] #1 — EXP 구슬 클래스
+> **commit 분할 단위 (사용자 결정)**: ① EXP 시스템 (ExpOrb + ExpLabel 숫자 HUD), ② 레벨업 시스템 (LevelUpScene + 카드 보상), ③ 무기 Registry + Dual Shot, ④ Triple Shot + Laser, ⑤ 능력치 보상 카드. 한 commit 안에 둘 이상의 시스템 섞지 말 것.
 
-- **활용**: `MapObject` 공통 부모 패턴 (4/28 ddf9e9e, 68c6e37) — Sky Blaster 식으로 응용. 또는 단순히 `IRecyclable` + 자동 흡수 로직만 구현해도 OK
-- placeholder: 초록 작은 원
-- 자동 흡수: Player 와의 거리 < 200px 이면 Player 쪽으로 lerp 이동, 충돌 (collisionRect) 시 흡수되어 사라짐 + Player.exp 증가
+#### [x] #1 — EXP 시스템 (ExpOrb + ExpLabel) *(코드 완료, 2026-05-01. 1 commit 단위)*
 
-#### [ ] #2 — Player 레벨/EXP Gauge + 보스 진입 타이머 (5주차에서 당김)
+ExpOrb (구슬):
+- **선택**: 단순 `IGameObject + IBoxCollidable + IRecyclable` (Sprite 도 상속 X) — 본격 부모 추출은 4주차 다른 sub-task 들이 다 깔린 뒤 같은 패턴이 여러 군데 보일 때 검토.
+- placeholder: cyan 원 (`Color.rgb(34, 211, 238)`) + 밝은 청록 테두리. RADIUS = 18f. (7주차 그래픽 폴리싱에서 PNG 교체)
+- 동작: **drop 즉시부터 매 프레임 Player 방향 추적** (`ATTRACT_SPEED = 800f/s`, 거리 제한 없음 — 탄환처럼 spawn 후 Player 향해 이동, Player 가 움직이면 방향 갱신되는 homing) → `collidesWith(player)` 시 `player.gainExp(VALUE = 1)` + self-remove.
+- drop 시점: `Enemy.startDying(scene)` 안에서 SUICIDE/RANGED/SPLIT 본체가 죽으면 그 자리에 1개 spawn. SPLIT_MINION 은 제외 (본체 1마리 = orb 1개 룰).
+- `MainScene.Layer.EXP_ORB` 추가 (ENEMY_BULLET 위, STARS 아래 — 적/탄과 함께 떠 보이게).
 
-- 상단 HUD 에 레벨 텍스트 + EXP gauge (파랑) + 보스 진입까지 타이머
-- exp 가 maxExp 도달하면 다음 sub-task 로 트리거 (이번 sub-task 에서는 표시까지)
+ExpLabel (HUD):
+- 좌하단 PlayerHpHud 게이지 오른쪽에 `"EXP: N"` 텍스트. cyan 색 (orb 와 매칭) — 시각적 연결.
+- ScoreLabel 패턴 (LabelUtil + 매 draw 마다 `scene.player.exp` 읽어 표시).
+- 위치: HP 게이지 (`x=30 + width×0.35`) 끝에서 25px 띄움, baseline 은 게이지 baseline 과 동일.
+- 4주차 #2 레벨업 시스템에서 maxExp 도달 시 `LevelUpScene.push()` 트리거 + level 표시 추가 예정. 이번 commit 에서는 누적 값까지만.
 
-#### [ ] #3 — 레벨업 보상 카드 Scene
+`Player` 에 `var exp: Int` + `gainExp(amount)` 추가.
 
-- `LevelUpScene : Scene(gctx)` — 반투명 overlay, 가운데 카드 3장. 카드 종류 = (Weapon, Skill, Stat) 중 무작위 3개
-- `MainScene.update()` 에서 Player.exp ≥ maxExp 면 `LevelUpScene(gctx, [card1, card2, card3]).push()`
-- 카드 클릭 시 보상 적용 후 pop
+#### [ ] #2 — 레벨업 시스템 (LevelUpScene + 카드 보상)
 
-#### [ ] #4 — 무기 시스템 베이스 (Weapon Registry) + Dual Shot
+- `Player` 에 `level`, `maxExp` (또는 `expForNextLevel`) 필드 추가. exp 가 maxExp 도달하면 level += 1, exp = 0 (또는 exp -= maxExp), maxExp 다음 단계 값으로 갱신.
+- ExpLabel 에 level 텍스트도 같이 표시 (`"Lv.N  EXP: e/m"` 같은 형태).
+- `LevelUpScene : Scene(gctx)` — 반투명 overlay, 가운데 카드 3장. 카드 종류는 #3/#5 (무기) / #5 (스탯) 도입 후 그 풀에서 무작위 3개. 4주차 #2 단계에서는 placeholder 카드 (예: "EXP +5" 같은 단순 보상 3개) 로 시작 가능.
+- `MainScene.update()` 에서 `player.exp >= player.maxExp` 면 `LevelUpScene(...).push()` — Scene stack 에 push 되면 `MainScene` 의 update 가 멈추므로 게임 정지.
+- 카드 클릭 시 보상 적용 → pop → MainScene 진행.
+
+#### [ ] #3 — 무기 시스템 베이스 (Weapon Registry) + Dual Shot
 
 - **활용**: `MapObject` Registry 패턴 (4/29 8017a48) 응용. `object WeaponRegistry { val all = listOf(DualShot, ...); fun random3() = ... }`
 - 각 Weapon 은 `fire(player, world)` 함수로 Bullet 생성 패턴 다르게 (Dual = 2발, Triple = 3발, Laser = 긴 직선)
-- 1주차 의 자동 발사를 `currentWeapon.fire(...)` 로 교체
+- 1주차의 자동 발사를 `currentWeapon.fire(...)` 로 교체
 
-#### [ ] #5 — Triple Shot + Laser
+#### [ ] #4 — Triple Shot + Laser
 
 - WeaponRegistry 에 추가
 - 보상 카드에서 선택 가능
 
-#### [ ] #6 — 능력치 증가 (5주차에서 당김)
+#### [ ] #5 — 능력치 증가 (5주차에서 당김)
 
 - Stat (데미지/공속/치명) 보상 카드에 추가. Player 멤버 `damageMul`, `fireRateMul`, `critRate`. Bullet 생성 시 / 데미지 계산 시 곱셈 적용
 
@@ -746,7 +758,7 @@ SUICIDE → RANGED → SPLIT 순서로 한 종류씩 도입하며 검증. 자폭
 
 ## 9. 현재 진척
 
-> **마지막 갱신**: 2026-05-01 (3주차 #1~#4 모두 디바이스 검증 완료. SUICIDE / RANGED (aimed + Y random) / SPLIT (= SUICIDE 본체 동작 + 분열) / VFX (hit + die 모두 dying/hitting 상태) 모두 정착값 확정. plan §7 sub-task 메모 / §8.2 의도적 차이표 / §10 디폴트값 모두 정착값 기준으로 정리 — **다음 세션이 §7 따라 구현하면 시행착오 단계 없이 한 번에 도달**. 다음은 #5 EnemyGenerator random 복원. 코드 working tree 모두 unstaged, commit 미실시.)
+> **마지막 갱신**: 2026-05-01 (3주차 #1~#4 모두 디바이스 검증 완료. SUICIDE / RANGED (aimed + Y random) / SPLIT (= SUICIDE 본체 동작 + 분열) / VFX (hit + die 모두 dying/hitting 상태) 모두 정착값 확정. plan §7 sub-task 메모 / §8.2 의도적 차이표 / §10 디폴트값 모두 정착값 기준으로 정리 — **다음 세션이 §7 따라 구현하면 시행착오 단계 없이 한 번에 도달**. 사용자 결정으로 **3주차는 SUICIDE / RANGED / SPLIT / VFX / random 복원 5개 commit 으로 분할** 진행 (§7 3주차 머리말). 다음은 #5 EnemyGenerator random 복원. 코드 working tree 모두 unstaged, commit 미실시.)
 
 ### 9.1 완료 / 진행 / 다음
 
@@ -769,7 +781,9 @@ SUICIDE → RANGED → SPLIT 순서로 한 종류씩 도입하며 검증. 자폭
 | ✅ 디바이스 검증 OK | **3주차 #3 SPLIT 분열 + SPLIT_MINION 자폭** | SPLIT 본체 = SUICIDE 와 같은 lock-on 자폭 (코드 공유) + 죽을 때 minion 분열, minion 도 lock-on 자폭 |
 | ✅ 디바이스 검증 OK | **3주차 #4 VFX (hit + die)** | dying / hitting 상태 패턴 일관 적용. 별도 Effect 클래스 / EFFECT layer / muzzle flash 단계 모두 없음 |
 | ✅ 보강 완료 | **(1주차 #5) BossScene 진입 시 spawn 정지 + "BOSS STAGE" 라벨** | `isBossStage` val + 조건부 add + BossTimerHud 텍스트 분기 |
-| ▶ **다음** | **3주차 #5 EnemyGenerator random 복원 + 밸런스** | `entries.filter { it != SPLIT_MINION }.random()`, 3종 동시 등장 시 spawn 빈도/HP/데미지 1차 밸런싱 |
+| ✅ random 복원 완료 (밸런싱 후순위) | **3주차 #5 EnemyGenerator random 복원** | `SPAWNABLE_TYPES = Enemy.Type.entries.filter { it != SPLIT_MINION }` 캐시 + `.random()`. 수치 밸런싱은 7~8주차 polish 단계로 미룸 |
+| 🟡 코드 완료, 디바이스 검증 중 | **4주차 #1 EXP 시스템 (ExpOrb + ExpLabel)** | ExpOrb (cyan 원, drop 즉시 Player homing 800f/s) + ExpLabel (좌하단 HP 게이지 옆 cyan "EXP: N"). 1 commit 단위 |
+| ▶ **다음** | **4주차 #1 디바이스 검증 → #2 레벨업 시스템 (LevelUpScene + 카드 보상)** | 적 처치 시 cyan orb 가 즉시 Player 향해 끌려옴 + 흡수 시 EXP HUD 숫자 증가 확인. #2 는 maxExp 도달 시 Scene stack push 로 게임 정지 + 카드 3장 |
 | ⏸ 대기 | 4~8주차 전부 | |
 
 ### 9.2 빌드 / 동작 확인 상태

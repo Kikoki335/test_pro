@@ -19,9 +19,9 @@ class EnemyGenerator(
 
     private fun spawn() {
         val scene = gctx.scene as? MainScene ?: return
-        // 검증 단계용 임시 single-type spawn. SUICIDE/RANGED/SPLIT 중 한 줄만 바꿔 단독 검증.
-        // random 복원은 3주차 #5 에서.
-        val type = Enemy.Type.SPLIT
+        // SPLIT_MINION 은 SPLIT 본체가 죽을 때 분열로만 등장하므로 일반 spawn 풀에서 제외.
+        // 나머지 SUICIDE / RANGED / SPLIT 중 균등 random.
+        val type = SPAWNABLE_TYPES.random()
         val margin = type.width / 2f
         val x = margin + Random.nextFloat() * (gctx.metrics.width - 2 * margin)
         val enemy = Enemy.get(gctx, x, type)
@@ -35,5 +35,7 @@ class EnemyGenerator(
 
     companion object {
         const val GEN_INTERVAL = 1.0f
+        // entries 를 매 spawn 마다 다시 필터링하지 않도록 한 번만 계산해 둔다.
+        private val SPAWNABLE_TYPES = Enemy.Type.entries.filter { it != Enemy.Type.SPLIT_MINION }
     }
 }

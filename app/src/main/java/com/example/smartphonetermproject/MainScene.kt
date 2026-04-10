@@ -23,6 +23,8 @@ open class MainScene(
         // 적이 발사한 탄. ENEMY 위에 그려져 적이 자기가 쏜 탄을 가리지 않게 한다.
         // STARS parallax 보다는 아래라 별빛이 탄을 살짝 덮을 수 있는데, 시인성 측면에서 큰 문제는 없다.
         ENEMY_BULLET,
+        // EXP 구슬 — Enemy 사망 자리에 drop. 적/탄과 함께 떠 보이도록 ENEMY_BULLET 위, STARS 아래.
+        EXP_ORB,
         STARS,
         CONTROLLER,
         UI,
@@ -39,6 +41,7 @@ open class MainScene(
     private val collisionChecker = CollisionChecker(gctx)
     private val scoreLabel = ScoreLabel(gctx)
     private val playerHpHud = PlayerHpHud(gctx)
+    private val expLabel = ExpLabel(gctx)
     private val bossTimerHud = BossTimerHud(gctx)
 
     var score = 0
@@ -61,6 +64,7 @@ open class MainScene(
         add(collisionChecker, Layer.CONTROLLER)
         add(scoreLabel, Layer.UI)
         add(playerHpHud, Layer.UI)
+        add(expLabel, Layer.UI)
         add(bossTimerHud, Layer.UI)
     }
 
