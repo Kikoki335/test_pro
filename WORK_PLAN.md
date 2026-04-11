@@ -47,7 +47,7 @@ E:/test 의 Sky Blaster (종스크롤 슈팅 × 로그라이크) 안드로이드
 
 ### 1.3 기간
 
-8주, 2026-04-06 시작 ~ 2026-05-31 종료. 현재 1주차 진행 중 (sub-task #1~#4 완료, 2026-05-01 기준).
+8주, 2026-04-06 시작 ~ 2026-05-31 종료. 현재 1주차 진행 중 (sub-task #1~#5 완료, 2026-05-01 기준).
 
 ---
 
@@ -356,51 +356,63 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
 - **기준 동작**:
   - Player 가 0.3초 간격으로 위로 노란 Bullet 발사
   - 화면 밖 Bullet 은 self-remove + 재활용. debug 좌상단 layer counts 가 안정적 (Bullet 풀 누적되어 1개 풀에서 돌려쓰는 것을 확인 가능)
-- **`IBoxCollidable`/`power` 미포함**: 사양상 #6 (충돌 + HUD) 에서 모든 객체에 한꺼번에 추가, 4주차 무기 시스템에서 power 도입. DragonFlight 4/9 는 둘 다 포함되어 있지만, Sky Blaster 의 Scene/Character/Collision sub-task 분리 (§2.2#5) 정책에 맞춰 collision 인터페이스 도입을 #6 으로 일원화.
+- **`IBoxCollidable` 미포함, `power` 미포함**: `IBoxCollidable` 은 다음 #5 (몬스터 소환 + Bullet 충돌 + Enemy HP gauge) 에서 Enemy 와 같이 추가. `power` 는 4주차 무기 시스템에서 도입 (그 전까지는 `Bullet.DAMAGE = 1` 상수). DragonFlight 4/9 Bullet 은 `power` 까지 포함되어 있지만, Sky Blaster 1주차에는 무기 종류가 1종이라 상수로 시작.
 
-#### [ ] #5 — Enemy 3종 + EnemyGenerator (`CONTROLLER` layer)
+#### [x] #5 — Enemy 3종 + EnemyGenerator + Bullet↔Enemy 충돌 + Enemy HP Gauge (`CONTROLLER` layer) *(완료, 2026-05-01)*
 
 - **활용 framework**:
-  - DragonFlight `Enemy` (4/2 4e4bc48 → 4/3 IBoxCollidable + Gauge 적용 → 4/4 IRecyclable) 참조
-  - `EnemyGenerator` (4/2 f67c1e9) — `IGameObject`, update 마다 시간 누적해서 spawn
-  - `CONTROLLER` layer 에 EnemyGenerator 배치 (화면에 안 그려지지만 update 받음)
+  - DragonFlight `Enemy` (4/2 `4e4bc48` → 4/3 `8bde3e8` IBoxCollidable + `15ed809` Gauge + `be491bf` Enemy life Gauge → 4/4 `120ff73` IRecyclable) — `private constructor` + `companion get()` + `bitmap = gctx.res.getBitmap(...)` 재활용 시 swap, `companion object` 에 정적 `Gauge` 공유
+  - DragonFlight `EnemyGenerator` (4/2 `f67c1e9`) — `IGameObject`, `update()` 에서 `enemyTime -= frameTime`, 0 이하면 spawn 후 `enemyTime = GEN_INTERVAL`
+  - DragonFlight `CollisionChecker` (4/3 `c5291c8` 후 `IBoxCollidable` 적용형) — `forEachReversedAt(ENEMY) { forEachReversedAt(BULLET) { ... } }` 이중 reverse 순회로 self-remove 안전 보장
+  - `IBoxCollidable` (4/3 `8bde3e8`) + `collidesWith` extension
+  - `Gauge` (4/3 `15ed809`) — Enemy HP bar
+  - `CONTROLLER` layer 에 EnemyGenerator + CollisionChecker 배치 (화면에 안 그려지지만 update 받음)
+  - Layer enum 에 `ENEMY`, `CONTROLLER` 신규 추가 (incremental 원칙 §11#12)
 - **만들 것**:
-  - `app/.../Enemy.kt` — `IRecyclable`. enum `Type { SUICIDE, RANGED, SPLIT }`. type 따라 placeholder 색/모양/HP/속도 다름:
-    - SUICIDE: 빨간 원, HP 1, 속도 빠름 (400f), 1주차에는 단순 하강 (자폭 동작은 5주차 추가)
-    - RANGED: 주황 삼각, HP 2, 속도 느림 (200f), 1주차에는 단순 하강 (탄환 발사는 5주차 추가)
-    - SPLIT: 보라 사각, HP 3, 속도 중간 (300f), 1주차에는 단순 하강 (분열은 5주차 추가)
-  - `update()` 에서 `y += speed * frameTime`, 화면 밖이면 self-remove
-  - `app/.../EnemyGenerator.kt` — `IGameObject`. `update()` 에서 `time += frameTime`, 일정 간격 (예 1.0초) 지나면 spawn:
-    ```kotlin
-    val type = Enemy.Type.entries.random()
-    val x = Random.nextFloat() * 900f
-    val enemy = world.obtain(Enemy::class.java) ?: Enemy(gctx)
-    enemy.init(x, -50f, type)
-    world.add(enemy, MainScene.Layer.ENEMY)
-    ```
+  - placeholder PNG 3장 (`app/src/main/res/mipmap-xxxhdpi/`):
+    - `enemy_suicide.png` (80×80 캔버스 안 70×70 빨간 원, `#EF4444`)
+    - `enemy_ranged.png` (80×80 주황 삼각형 꼭짓점 아래, `#F97316`)
+    - `enemy_split.png` (70×70 캔버스 안 60×60 보라 사각, `#A855F7`)
+  - `app/.../Enemy.kt` — `Sprite + IBoxCollidable + IRecyclable`. `enum Type(resId, width, height, hp, speed)` 로 3종 스탯 묶음 (SUICIDE 70×70/HP1/400f, RANGED 80×80/HP2/200f, SPLIT 60×60/HP3/300f). `private ctor` + `companion get(gctx, x, type)` 패턴, `init(x, type)` 가 비트맵·width·height·life·maxLife·speed 재초기화. `update()` 에서 `y += speed*frameTime`, 화면 아래로 완전히 빠지면 self-remove. `decreaseLife(damage)`, `val dead get() = life <= 0` 노출. `companion object` 에 정적 `Gauge` (lazy 초기화, 모든 Enemy 공유 — DragonFlight 패턴), `draw()` 에서 `super.draw()` 후 머리 위 또는 발 아래에 `gauge.draw(canvas, gaugeX, gaugeY, gaugeWidth, life/maxLife)`. 색은 fg=`Color.GREEN`, bg=`Color.argb(180,0,0,0)` 으로 placeholder 단순화. `collisionRect = RectF()` + `updateCollisionRect()` 에서 dstRect 그대로 사용 (placeholder 단계라 inset 없음 — §8.2 사유 추가)
+  - `app/.../Bullet.kt` — `IBoxCollidable` 추가. `collisionRect: RectF get() = dstRect` 패턴 (DragonFlight Bullet 4/9 와 동일 — 별도 RectF 안 만들고 dstRect 직통)
+  - `app/.../EnemyGenerator.kt` — `IGameObject`. `enemyTime` 카운트다운 → 0 이하면 `Enemy.Type.entries.random()` + `Random.nextFloat() * (width - 2*margin) + margin` 으로 X 결정 → `Enemy.get()` 후 `world.add(enemy, ENEMY)`. `GEN_INTERVAL = 1.0f`. `draw()` 빈 구현.
+  - `app/.../CollisionChecker.kt` — `IGameObject`. `update()` 에서 `scene.world.forEachReversedAt(ENEMY) { enemy → forEachReversedAt(BULLET) { bullet → if (bullet.collidesWith(enemy)) { remove bullet, enemy.decreaseLife(Bullet.DAMAGE); if (enemy.dead) remove enemy } } }`. Player↔Enemy 충돌은 #6 에서 추가. `draw()` 빈 구현 (collisionRect 디버그 표시는 World.draw() 가 자동 처리, `a2dg/.../World.kt:184-198`).
+  - `Bullet.kt` 에 `companion const val DAMAGE = 1` 추가 (4주차 무기 시스템에서 power 로 교체 예정).
+  - `MainScene.kt` — Layer enum 에 `ENEMY, CONTROLLER` 추가, `enemyGenerator = EnemyGenerator(gctx)` + `collisionChecker = CollisionChecker(gctx)` 인스턴스 생성, 둘 다 `world.add(_, Layer.CONTROLLER)`.
 - **기준 동작**:
   - 위에서 1초 간격으로 3종 중 랜덤 적이 내려옴
+  - 화면 아래로 빠진 Enemy 는 self-remove + recycle bin → 재사용
+  - 노란 Bullet 이 Enemy 에 닿으면 Bullet 사라지고 Enemy HP 1 깎임. Enemy 머리 위(또는 발 아래) HP gauge 가 줄어듦. HP 0 되면 Enemy 도 사라짐 + recycle (점수 가산은 #6 에서)
+  - debug 좌상단 `[1, 1, N, M, 2]` 형태로 보임 (BG/Player/Bullet/Enemy/CONTROLLER). CONTROLLER 가 EnemyGenerator + CollisionChecker 둘이라 2.
+  - debug 모드에서 IBoxCollidable 객체들의 collisionRect 가 자동으로 빨간 테두리로 표시됨 (`a2dg/.../World.kt:184`)
+- **DragonFlight 4/9 와 다른 점 (§8.2)**:
+  - `AnimSprite` 대신 `Sprite` — placeholder 가 단일 프레임이라 framesheet 불필요. 7주차 리소스 시 `AnimSprite`/`SheetSprite` 로 교체.
+  - 1종(level 다양화) 대신 **Type enum 으로 3종 분리** — 사양상 자폭/원거리/분열이 분리된 종류이므로. 1주차에는 외형/스탯만 다르고 동작은 동일 (단순 하강), 5주차에 자폭 데미지·원거리 발사·분열 동작 추가
+  - DragonFlight 의 wave 시스템(5마리/wave + 속도 점증) 대신 단순 1마리/1초 spawn — 1주차 분량 조정. wave 시스템은 8주차 밸런스 단계에서 검토
+  - Bullet `power` 미포함 — `Bullet.DAMAGE = 1` 상수로 시작, 4주차에 power 도입
+  - Enemy collisionRect inset 없음 — DragonFlight 는 11f inset 으로 시각보다 안쪽 충돌, Sky Blaster placeholder 는 단순 도형이라 그대로 dstRect 사용. 7주차 그래픽 교체 시 inset 재검토
+  - Player↔Enemy 충돌 미포함 — #6 에서 분리 추가
   - 화면 아래로 빠진 Enemy 는 재활용
 
-#### [ ] #6 — 충돌 (Bullet↔Enemy, Player↔Enemy) + HUD (HP Gauge + Score)
+#### [ ] #6 — Player↔Enemy 충돌 + HUD (Player HP Gauge + Score)
 
 - **활용 framework**:
-  - `IBoxCollidable` (4/3 8bde3e8) + `collidesWith`
-  - DragonFlight `CollisionChecker` (4/3 c5291c8) 참조 — `World.objectsAt(layer)` 또는 `forEachReversedAt` 으로 양 layer 순회
-  - `Gauge` (4/3 15ed809) — Player HP 표시
-  - 점수: 일단 `LabelUtil` (텍스트). 7주차에 `ImageNumber` 로 교체 예정
+  - `IBoxCollidable` (4/3 8bde3e8) — Player 에 추가
+  - 점수 표시: 일단 `LabelUtil` (4/3 b1128b6, 00e203a) 텍스트. 7주차에 `ImageNumber` 로 교체 예정
+  - `Gauge` (4/3 15ed809) — Player HP 표시 (Enemy 와 별도 인스턴스, 색 빨강/회색)
 - **만들 것**:
-  - `Player`, `Bullet`, `Enemy` 가 `IBoxCollidable` 구현 — `collisionRect: RectF` 필드 추가하고 `update()` 에서 갱신
-  - `app/.../CollisionChecker.kt` — `IGameObject`, `CONTROLLER` layer. update 마다 BULLET 과 ENEMY 순회 (둘 다 reverse 로 안전하게), 충돌하면 Enemy.takeDamage(1), Bullet self-remove. PLAYER 와 ENEMY 도 비교 — 부딪히면 Player.life -= 1, Enemy self-remove.
-  - `Player` 에 `life: Int = 5`, `gauge: Gauge`. 화면 하단에 HP gauge 그리기 (Player.draw 에서 직접 또는 별도 HUD 객체).
-  - 점수: `MainScene` 에 `var score = 0`. Enemy 처치 시 점수 가산. `LabelUtil` 으로 화면 상단에 "Score: 1234" 표시 — 별도 `Score` 객체 만들어 `UI` layer 에 배치.
+  - `Player` 가 `IBoxCollidable` 구현 — `collisionRect: RectF get() = dstRect`
+  - `Player` 에 `life: Int = 5`, `decreaseLife()`, `dead` getter. `MainScene` 의 별도 HUD 객체에서 화면 하단에 HP gauge (빨강) 표시.
+  - `app/.../CollisionChecker.kt` — Bullet↔Enemy 외부 루프 안에 또는 별도 루프로 PLAYER↔ENEMY 추가. 부딪히면 `player.decreaseLife(1)`, Enemy self-remove. (DragonFlight 패턴은 ENEMY 외부 루프 시작점에서 player 와 비교 후 충돌 시 enemy remove + return — 그대로 적용)
+  - 점수: `MainScene` 에 `var score = 0` + `addScore(s)`. Enemy 처치 시 `Enemy.Type.score` 가산. 별도 `Score` 객체 (LabelUtil 사용) 를 `UI` layer 에 배치해 화면 상단 표시.
+  - `Enemy.Type` 에 `score: Int` 컬럼 추가 (SUICIDE 10, RANGED 20, SPLIT 30).
+  - Layer enum 에 `UI` 추가 (incremental — Score 객체 도입과 함께).
   - Player.life ≤ 0 이면 일단 Activity finish (3주차에 Result Scene 으로 교체 예정).
 - **기준 동작**:
-  - Bullet 이 Enemy 에 닿으면 Enemy HP 깎이고 0 되면 사라짐, 점수 +10
-  - Player 가 Enemy 에 닿으면 HP 깎임, Enemy 사라짐
+  - Player 가 Enemy 에 닿으면 HP 1 깎임, Enemy 사라짐
   - 하단 HP gauge 가 줄어들고, 0 되면 게임 종료 (앱 종료)
-  - 상단에 점수 표시
-- **1주차 종료 후 게임 한 사이클**: 배경 흐름 + Player 자유 이동 + 자동 발사 + 적 spawn + 충돌 + 점수/HP 변동.
+  - 상단에 점수 표시 — Enemy 처치 시 점수 가산 (10/20/30)
+- **1주차 종료 후 게임 한 사이클**: 배경 흐름 + Player 자유 이동 + 자동 발사 + 적 spawn + Bullet↔Enemy 충돌 + Player↔Enemy 충돌 + 점수/HP 변동.
 
 ### 2주차 (~4/17, 누적) — 3 commits
 
@@ -569,12 +581,15 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 | 배경 | DragonFlight 이미지 (`df_bg.png`) | placeholder 색/단순 비트맵 | 같은 리소스 수집 제외 규칙 |
 | 입력 시작점 | JoyStick → Player 직접 처리로 진화 | 처음부터 Player 직접 처리 | 4/10 시점 framework 가 이미 도달한 최종형(`9e232ab`)을 따라감. 중간 JoyStick 단계는 학습용이라 안 거침 |
 | MainScene Layer 순서 | BACKGROUND, PLAYER, BULLET, ENEMY, CONTROLLER, UI | (1주차 #1 에서 동일하게 맞춤) | framework 와 동일 — Player 가 아래, Bullet/Enemy 가 위에 그려짐 |
+| Bullet `power` 필드 | `init(...power)` 로 받아 `enemy.decreaseLife(bullet.power)` | `Bullet.DAMAGE = 1` 상수 | 1주차에는 무기 1종 (자동 직진 발사) 뿐이라 데미지 다양화 불필요. 4주차 무기 시스템(Dual/Triple/Laser) 도입 시 `power` 필드로 교체 |
+| Enemy collisionRect inset | dstRect 기준 11f 안쪽 inset (날개 등 시각 여백 보정) | inset 없이 dstRect 그대로 (`updateCollisionRect` 가 단순 박스 복사) | placeholder 가 단순 빨간 원/주황 삼각/보라 사각이라 시각 여백이 거의 없음. 7주차 그래픽 교체 시 종별 inset 재산정 |
+| 충돌 시점 분리 | 4/9 시점에 Bullet↔Enemy + Player↔Enemy 동시 도입 | #5 (Bullet↔Enemy + Enemy gauge) 와 #6 (Player↔Enemy + HUD) 로 분리 | §2.2#5 분리 정책. "Enemy 자체의 self-contained 동작 (소환/체력/처치)" 과 "플레이어 피격/HUD" 를 다른 commit 으로 |
 
 ---
 
 ## 9. 현재 진척
 
-> **마지막 갱신**: 2026-05-01 (1주차 #4 — Bullet + 자동 발사 완료 후)
+> **마지막 갱신**: 2026-05-01 (1주차 #5 — Enemy 3종 + EnemyGenerator + Bullet↔Enemy 충돌 + Enemy HP Gauge 완료 후. 계획 재분리: 기존 #6 의 Bullet↔Enemy/Enemy gauge 를 #5 로 합침. #6 은 Player↔Enemy + HUD 만)
 
 ### 9.1 완료 / 진행 / 다음
 
@@ -584,8 +599,9 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 | ✅ 완료 | 1주차 #2 — VertScrollBackground 종스크롤 배경 | placeholder `sky_bg.png` (900×1600) |
 | ✅ 완료 | 1주차 #3 — Player 클래스 + 터치 드래그 이동 | placeholder `player_placeholder.png`, X+Y 드래그 follow |
 | ✅ 완료 | 1주차 #4 — Player 자동 발사 + Bullet (Recyclable + ObjectPool) | placeholder `bullet_placeholder.png`, `Bullet.get()` 풀 패턴, `FIRE_INTERVAL = 0.3f` |
-| ▶ **다음** | **1주차 #5 — Enemy 3종 + EnemyGenerator (`CONTROLLER` layer)** | §7 1주차 #5 참조 |
-| ⏸ 대기 | 1주차 #6, 그리고 2~8주차 전부 | |
+| ✅ 완료 | 1주차 #5 — Enemy 3종 + EnemyGenerator + Bullet↔Enemy 충돌 + Enemy HP Gauge | placeholder PNG 3장, `Enemy.Type` enum, 1초 간격 spawn, `Bullet`/`Enemy` 가 `IBoxCollidable`, `CollisionChecker` 가 BULLET↔ENEMY 이중 reverse 순회, Enemy 머리 위 HP gauge (정적 공유) |
+| ▶ **다음** | **1주차 #6 — Player↔Enemy 충돌 + HUD (Player HP Gauge + Score)** | §7 1주차 #6 참조 |
+| ⏸ 대기 | 2~8주차 전부 | |
 
 ### 9.2 빌드 / 동작 확인 상태
 
@@ -646,13 +662,13 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 
 ### 10.4 Enemy 종류별
 
-| 종류 | placeholder | HP | 속도 (아래 방향) | 점수 |
-|---|---|---|---|---|
-| 자폭병 | 빨간 원 70px | 1 | 400f/s | 10 |
-| 원거리 | 주황 삼각 80px | 2 | 200f/s | 20 |
-| 분열형 | 보라 사각 60px | 3 | 300f/s | 30 |
+| 종류 | placeholder | width×height | HP | 속도 (아래 방향) | 점수 (#6 에서 부여) |
+|---|---|---|---|---|---|
+| `Type.SUICIDE` | 빨간 원 (`#EF4444`) | 70×70 | 1 | 400f/s | 10 |
+| `Type.RANGED` | 주황 삼각 (`#F97316`) | 80×80 | 2 | 200f/s | 20 |
+| `Type.SPLIT` | 보라 사각 (`#A855F7`) | 60×60 | 3 | 300f/s | 30 |
 
-EnemyGenerator: spawn 간격 1.0초 (1주차에는 단순 — 2주차 이후 점진 증가 가능)
+EnemyGenerator: spawn 간격 `GEN_INTERVAL = 1.0f` (단순 1마리/1초). 8주차 밸런스 단계에서 wave 시스템 검토.
 
 ### 10.5 Layer enum (incremental — 그 시점 클래스가 있는 것만)
 

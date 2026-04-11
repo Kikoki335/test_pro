@@ -11,14 +11,20 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         BACKGROUND,
         PLAYER,
         BULLET,
+        ENEMY,
+        CONTROLLER,
     }
 
     private val background = VertScrollBackground(gctx, R.mipmap.sky_bg, BACKGROUND_SPEED)
     private val player = Player(gctx)
+    private val enemyGenerator = EnemyGenerator(gctx)
+    private val collisionChecker = CollisionChecker(gctx)
 
     override val world = World(Layer.entries.toTypedArray()).apply {
         add(background, Layer.BACKGROUND)
         add(player, Layer.PLAYER)
+        add(enemyGenerator, Layer.CONTROLLER)
+        add(collisionChecker, Layer.CONTROLLER)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
