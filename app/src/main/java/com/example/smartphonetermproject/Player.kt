@@ -1,15 +1,30 @@
 package com.example.smartphonetermproject
 
+import android.graphics.RectF
 import android.view.MotionEvent
+import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IBoxCollidable
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.Sprite
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 import kotlin.math.hypot
 
-class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder) {
+class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder), IBoxCollidable {
     override var width = PLAYER_WIDTH
     override var height = PLAYER_HEIGHT
     override var x = gctx.metrics.width / 2f
     override var y = gctx.metrics.height - PLAYER_HEIGHT * 1.5f
+
+    // Player 충돌 박스는 그림 영역(dstRect)과 동일하게 본다.
+    // syncDstRect() 가 update() 마다 dstRect 를 최신 위치로 맞추므로,
+    // 별도 RectF 를 들고 있을 필요 없이 dstRect 를 그대로 노출한다.
+    override val collisionRect: RectF
+        get() = dstRect
+
+    var life = MAX_LIFE
+        private set
+    val maxLife: Int
+        get() = MAX_LIFE
+    val dead: Boolean
+        get() = life <= 0
 
     private val minX = PLAYER_WIDTH / 2f
     private val maxX = gctx.metrics.width - PLAYER_WIDTH / 2f
@@ -22,6 +37,10 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder) 
 
     init {
         syncDstRect()
+    }
+
+    fun decreaseLife(damage: Int) {
+        life -= damage
     }
 
     override fun update(gctx: GameContext) {
@@ -71,5 +90,6 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder) 
         const val PLAYER_HEIGHT = 100f
         const val FIRE_INTERVAL = 0.3f
         const val BULLET_OFFSET = 8f
+        const val MAX_LIFE = 5
     }
 }

@@ -19,11 +19,15 @@ class Enemy private constructor(
         val height: Float,
         val hp: Int,
         val speed: Float,
+        val score: Int,
     ) {
-        SUICIDE(R.mipmap.enemy_suicide, 70f, 70f, 1, 400f),
-        RANGED(R.mipmap.enemy_ranged, 80f, 80f, 2, 200f),
-        SPLIT(R.mipmap.enemy_split, 60f, 60f, 3, 300f),
+        SUICIDE(R.mipmap.enemy_suicide, 70f, 70f, 1, 400f, 10),
+        RANGED(R.mipmap.enemy_ranged, 80f, 80f, 2, 200f, 20),
+        SPLIT(R.mipmap.enemy_split, 60f, 60f, 3, 300f, 30),
     }
+
+    val score: Int
+        get() = type.score
 
     private lateinit var type: Type
     var life = 0
