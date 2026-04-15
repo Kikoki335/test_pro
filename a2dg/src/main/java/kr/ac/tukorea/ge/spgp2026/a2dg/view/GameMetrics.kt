@@ -28,6 +28,11 @@ class GameMetrics {
     // 이 값은 단순히 (0,0,width,height) 와 같지 않을 수 있다.
     val screenRect = RectF()
 
+    // 가상 좌표계 박스 자체 (0, 0, width, height).
+    // Scene.clipsRect = true 일 때 GameView 가 canvas.clipRect 에 사용하므로,
+    // 매번 RectF 를 새로 만들지 않도록 한 곳에 모아 둔다.
+    val borderRect = RectF(0f, 0f, DEFAULT_VIRTUAL_WIDTH, DEFAULT_VIRTUAL_HEIGHT)
+
     // mapPoints() 는 배열을 받는 API 이므로 입력 좌표 변환에 쓸 작은 버퍼를 미리 만들어 재사용한다.
     private val touchPoint = floatArrayOf(0f, 0f)
     // fromScreen(), toScreen() 이 PointF 를 매번 새로 만들지 않도록 반환용 객체도 하나만 재사용한다.
@@ -53,6 +58,8 @@ class GameMetrics {
 
         screenRect.set(0f, 0f, w.toFloat(), h.toFloat())
         inverseTransformMatrix.mapRect(screenRect)
+        // setSize() 가 onSize() 이후에 호출될 가능성을 대비해 매번 갱신한다.
+        borderRect.set(0f, 0f, width, height)
         Log.d(
             javaClass.simpleName,
             "onSize: screen=${w}x$h, virtual=${width}x$height, screenRect=$screenRect"

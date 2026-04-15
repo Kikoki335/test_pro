@@ -13,6 +13,11 @@ abstract class Scene(
     // World 가 없는 특수 Scene 이라면 null 을 유지한 채 update / draw 를 직접 override 하면 된다.
     open val world: World<*>? = null
 
+    // clipsRect 가 true 면 GameView 가 이 Scene 을 그릴 때 가상 좌표계 박스 (gctx.metrics.borderRect) 로
+    // canvas 를 clip 한다. 화면 비율이 가상 좌표계와 안 맞아 letterbox 영역이 생겼을 때
+    // 배경 비트맵 등이 그 영역으로 새 나가는 것을 막는다.
+    open val clipsRect = false
+
     open fun update(gctx: GameContext) {
         world?.update(gctx)
     }
