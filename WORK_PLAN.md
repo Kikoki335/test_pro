@@ -47,7 +47,7 @@ E:/test 의 Sky Blaster (종스크롤 슈팅 × 로그라이크) 안드로이드
 
 ### 1.3 기간
 
-8주, 2026-04-06 시작 ~ 2026-05-31 종료. 현재 2주차 진행 중 (1주차 #1~#6 + 2주차 #1~#3 완료, 2026-05-01 기준).
+8주, 2026-04-06 시작 ~ 2026-05-31 종료. 현재 3주차 진입 직전 (1주차 #1~#6 + 2주차 #1~#4 완료, 2026-05-01 기준).
 
 ---
 
@@ -426,7 +426,7 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
   - `STARS` layer 를 `ENEMY` 와 `CONTROLLER` 사이에 추가 — DragonFlight 4/13 enum 의 `CLOUD` 자리에 해당. 즉 **별이 Player/Bullet/Enemy 위에** 그려져 캐릭터들 위로 별빛이 흐르는 parallax 효과 (우주선이 빠르게 별빛 사이를 통과하는 느낌)
 - **만든 것**:
   - `app/src/main/res/mipmap-xxxhdpi/sky_bg.png` 재생성 — 별 점 빼고 짙은 남색 단색 `#0B1B3A` 만 (1주차 #2 의 placeholder 별을 이 레이어로 옮김. 그라데이션도 시도했으나 별 parallax 시인성 때문에 단색으로 정착)
-  - `app/src/main/res/mipmap-xxxhdpi/sky_stars.png` (900×1200, 투명 배경 + 별 103개: 작은 별 80개(알파 100~220) + 중간 별 18개(후광 + 코어) + 큰 빛나는 별 5개(2단 후광 + 십자 빛줄기). edge 100px buffer 로 tileable, §11#13)
+  - `app/src/main/res/mipmap-xxxhdpi/sky_star.png` (900×1200, 투명 배경 + 별 103개: 작은 별 80개(알파 100~220) + 중간 별 18개(후광 + 코어) + 큰 빛나는 별 5개(2단 후광 + 십자 빛줄기). edge 100px buffer 로 tileable, §11#13)
   - `app/src/main/res/mipmap-xxxhdpi/sky_clouds.png` 삭제 (잠깐 시도했던 구름은 별로 교체)
   - `MainScene.kt` — Layer enum 에 `STARS` 추가 (DragonFlight 의 `CLOUD` 자리), `stars = VertScrollBackground(gctx, R.mipmap.sky_stars, STARS_SPEED)` 인스턴스, `world.add(stars, Layer.STARS)`, `STARS_SPEED = 120f` (배경 80f 의 1.5배)
 - **기준 동작**: 짙은 남색 그라데이션 배경(80f) 위로 별 텍스처(120f) 가 더 빠르게 흘러 내려옴. Player/Bullet/Enemy 위로 별빛이 지나감 (parallax)
@@ -447,11 +447,11 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
 - **기준 동작**: 화면 비율이 가상 좌표계 (900×1600) 와 안 맞아도 letterbox 영역으로 배경 비트맵이나 별 이미지가 새 나가지 않음. 디버그 grid/border 도 metrics 의 borderRect 한 곳에서 옴.
 - **이 commit 의 범위**: framework 코드만. 비트맵 변경 없음.
 
-#### [x] #3 — sky_stars.png seamless 재생성 (clouds 패턴 적용) *(완료, 2026-05-01)*
+#### [x] #3 — sky_star.png seamless 재생성 (clouds 패턴 적용) *(완료, 2026-05-01)*
 
 - **활용 reference**: `E:/2_Project/.../res/mipmap-xxxhdpi/clouds.png` (900×600). 알파 분포 분석 결과 **상단 80px 완전 투명, 80~200px fade in (알파 12→95), 200~500px full(~95), 500~600px fade out** — 즉 **전체 50% 가 buffer/fade**. seamless 효과의 정체는 `VertScrollBackground` 코드가 아니라 **비트맵 디자인**.
 - **만든 것**:
-  - `sky_stars.png` 재생성 (900×1200) — 2_Project 의 clouds 비율을 그대로 옮김:
+  - `sky_star.png` 재생성 (900×1200) — 2_Project 의 clouds 비율을 그대로 옮김:
     - **0~150px**: 완전 투명 (12.5% — buffer)
     - **150~300px**: fade in (12.5% — 별 알파 0→full 선형 감쇠)
     - **300~900px**: full (50% — 별 full alpha)
@@ -465,14 +465,21 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
 - **기준 동작**: 별 parallax 의 두 tile 이 만나는 경계 부분에 시각 요소가 없으므로 끊기는 줄이 안 보임. 화면을 통과하는 동안 별이 자연스럽게 등장 → 가운데 환하게 → 자연스럽게 사라짐.
 - **§11#15 함정 추가** — `VertScrollBackground` 비트맵 design 가이드.
 
-#### [ ] #4 — AndroidManifest 정리 + HUD 자리 잡기
+#### [x] #4 — AndroidManifest 정리 + HUD 자리 잡기 *(완료, 2026-05-01)*
 
 - **활용 framework**: `screenOrientation="nosensor"` + `appCategory="game"` (4/13 `7867d49`)
-- **만들 것**:
-  - AndroidManifest 의 `SkyBlasterActivity` 에 `android:screenOrientation="nosensor"` 추가, application 에 `android:appCategory="game"` 추가. `appCategory` 는 API 26+ 에서 동작하지만 minSdk 24 라 lint 경고 가능 — 동작상 문제 없음
-  - 상단 점수 위치 정리 (1주차에 만든 Score 위치 미세조정)
-  - 보스 진입 타이머 자리 (실제 카운트다운은 5주차) — 단순히 "01:00" 텍스트 placeholder
-  - Player HP gauge 위치 정리 (이미 1주차 #6 에서 별도 `PlayerHpHud` 객체로 분리해 둠 — 위치만 미세 조정)
+- **만든 것**:
+  - `AndroidManifest.xml` — `application` 에 `android:appCategory="game"`, `SkyBlasterActivity` 에 `android:screenOrientation="nosensor"` 추가. `appCategory` 는 API 26+ 라 minSdk 24 환경에선 lint 경고 가능하나 동작상 문제 없음.
+  - `PlayerHpHud.kt` — 가운데 → **좌하단**으로 이동 (시안 02_normal_stage.png 기준). 색을 `Color.RED` → `Color.GREEN` 으로 변경 (시안의 full HP 상태). "HP" 텍스트 라벨도 게이지 위에 추가. gaugeWidth 을 화면 60% → 35% 로 축소 (좌하단 영역 적정 크기).
+  - `BossTimerHud.kt` 신규 — 상단 중앙 둥근 사각형 박스 + 게임 경과 시간 카운트업 (00:00 부터 시작, mm:ss 포맷). 박스 = 어두운 반투명 fill + 주황 stroke, 텍스트 = 주황 굵은 글씨. 사양상 01:00 도달 시점이 보스 진입 가능 시점 (README §1) — 진입 선택 분기 UI 는 5주차 #4 에서 이 카운터 값을 읽어 처리.
+  - `MainScene.kt` — `bossTimerHud = BossTimerHud(gctx)` 인스턴스, `world.add(bossTimerHud, Layer.UI)` 추가.
+  - `R.mipmap.sky_stars` → `R.mipmap.sky_star` 로 코드 참조 변경 — 사용자가 별 에셋 파일명을 `sky_star.png` (s 없음) 로 정착하면서 코드 일관 맞춤.
+- **기준 동작**:
+  - 좌상단: `Score: N` 텍스트
+  - 상단 중앙: 보스 진입 타이머 박스 + "1:00" placeholder
+  - 좌하단: "HP" 라벨 + 초록 게이지 (남은 비율 따라 줄어듦)
+  - 가로 회전 시 활성 자세 잠금 (nosensor)
+- **§7 §2.3 정책 어긋남 인정**: 1~6주차 placeholder 약속에서 — 이번 주차에서 이미 진짜 에셋 PNG 들이 들어와 있음. §10.5 placeholder 컨벤션은 그대로 두되 §2.3 에 "별 / 캐릭터 에셋은 2주차에 사용자 결정으로 당겨옴" 메모는 추후 정리.
 
 ### 3주차 (~4/24, 누적) — 4 commits *(7주차 화면 작업 당겨옴)*
 
@@ -623,13 +630,13 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 | Bullet `power` 필드 | `init(...power)` 로 받아 `enemy.decreaseLife(bullet.power)` | `Bullet.DAMAGE = 1` 상수 | 1주차에는 무기 1종 (자동 직진 발사) 뿐이라 데미지 다양화 불필요. 4주차 무기 시스템(Dual/Triple/Laser) 도입 시 `power` 필드로 교체 |
 | Enemy collisionRect inset | dstRect 기준 11f 안쪽 inset (날개 등 시각 여백 보정) | inset 없이 dstRect 그대로 (`updateCollisionRect` 가 단순 박스 복사) | placeholder 가 단순 빨간 원/주황 삼각/보라 사각이라 시각 여백이 거의 없음. 7주차 그래픽 교체 시 종별 inset 재산정 |
 | 충돌 시점 분리 | 4/9 시점에 Bullet↔Enemy + Player↔Enemy 동시 도입 | #5 (Bullet↔Enemy + Enemy gauge) 와 #6 (Player↔Enemy + HUD) 로 분리 | §2.2#5 분리 정책. "Enemy 자체의 self-contained 동작 (소환/체력/처치)" 과 "플레이어 피격/HUD" 를 다른 commit 으로 |
-| 두 번째 parallax 레이어 (2주차 #1) | 구름 (`clouds.png`) | 별 (`sky_stars.png`) — `STARS` layer | Sky Blaster 의 우주/밤하늘 컨셉. 별이 빠르게 흐르면 우주선이 별빛 사이를 통과하는 느낌이 살아남. framework 학습 목표(두 번째 `VertScrollBackground` 인스턴스)는 그대로 충족 |
+| 두 번째 parallax 레이어 (2주차 #1) | 구름 (`clouds.png`) | 별 (`sky_star.png`) — `STARS` layer | Sky Blaster 의 우주/밤하늘 컨셉. 별이 빠르게 흐르면 우주선이 별빛 사이를 통과하는 느낌이 살아남. framework 학습 목표(두 번째 `VertScrollBackground` 인스턴스)는 그대로 충족 |
 
 ---
 
 ## 9. 현재 진척
 
-> **마지막 갱신**: 2026-05-01 (2주차 #2 — a2dg framework 갱신, 2주차 #3 — sky_stars seamless 재생성 완료 후. #2/#3 분리: framework 갱신과 비주얼 작업이 다른 주제이므로 §2.2#5 에 따라 commit 분리. 2주차 commit 수 3 → 4 로 갱신. 다음은 2주차 #4 — AndroidManifest 정리 + HUD 자리 잡기)
+> **마지막 갱신**: 2026-05-01 (2주차 #4 완료 — AndroidManifest 메타 + HUD 자리 잡기 (BossTimerHud 신규, PlayerHpHud 좌하단·초록 재배치, sky_star 코드 참조 일관). 2주차 전체(#1~#4) 종료. 다음은 3주차 #1 — Title Scene 다듬기)
 
 ### 9.1 완료 / 진행 / 다음
 
@@ -641,11 +648,12 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 | ✅ 완료 | 1주차 #4 — Player 자동 발사 + Bullet (Recyclable + ObjectPool) | placeholder `bullet_placeholder.png`, `Bullet.get()` 풀 패턴, `FIRE_INTERVAL = 0.3f` |
 | ✅ 완료 | 1주차 #5 — Enemy 3종 + EnemyGenerator + Bullet↔Enemy 충돌 + Enemy HP Gauge | placeholder PNG 3장, `Enemy.Type` enum, 1초 간격 spawn, `Bullet`/`Enemy` 가 `IBoxCollidable`, `CollisionChecker` 가 BULLET↔ENEMY 이중 reverse 순회, Enemy 머리 위 HP gauge (정적 공유) |
 | ✅ 완료 | 1주차 #6 — Player↔Enemy 충돌 + HUD (Player HP Gauge + Score) | `Player` IBoxCollidable + `life=5`/`decreaseLife`/`dead`, `Enemy.Type` 에 `score` 컬럼(10/20/30), `MainScene.score`+`addScore`, `ScoreLabel`(LabelUtil) + `PlayerHpHud`(Gauge 빨강) UI layer, `CollisionChecker` 에 PLAYER↔ENEMY 추가 + dead 시 Activity.finish |
-| ✅ 완료 | 2주차 #1 — 별 parallax 레이어 (구름 대신 별, §8.2) | `sky_bg.png` 별 빼고 단색 (`#0B1B3A`) + `sky_stars.png` 신규, `STARS` layer (ENEMY 뒤·CONTROLLER 앞), `STARS_SPEED = 120f` |
+| ✅ 완료 | 2주차 #1 — 별 parallax 레이어 (구름 대신 별, §8.2) | `sky_bg.png` 별 빼고 단색 (`#0B1B3A`) + `sky_star.png` 신규, `STARS` layer (ENEMY 뒤·CONTROLLER 앞), `STARS_SPEED = 120f` |
 | ✅ 완료 | 2주차 #2 — a2dg framework 갱신 (Scene.clipRect + GameMetrics.borderRect + GameView clip) | 2_Project 4/13 `3300abc`+`10492d7` 의 변경분 그대로 가져옴, MainScene `clipsRect = true` |
-| ✅ 완료 | 2주차 #3 — sky_stars.png seamless 재생성 (clouds 패턴 적용) | clouds.png 의 50% buffer/fade 비율을 별 비트맵에 옮김. 위/아래 150px transparent + 150px fade in/out + 가운데 600px full. 별 위치별 알파 감쇠 |
-| ▶ **다음** | **2주차 #4 — AndroidManifest 정리 + HUD 자리 잡기** | screenOrientation `nosensor` + appCategory `game` + 점수/HP gauge/보스 진입 타이머 placeholder 위치 정리 |
-| ⏸ 대기 | 3~8주차 전부 | |
+| ✅ 완료 | 2주차 #3 — sky_star.png seamless 재생성 (clouds 패턴 적용) | clouds.png 의 50% buffer/fade 비율을 별 비트맵에 옮김. 이후 사용자가 진짜 별 에셋으로 교체 |
+| ✅ 완료 | 2주차 #4 — AndroidManifest 정리 + HUD 자리 잡기 | `appCategory="game"` + `screenOrientation="nosensor"`, `PlayerHpHud` 좌하단·초록 + HP 라벨, `BossTimerHud` 신규 (상단 중앙 둥근 박스 placeholder), code reference `sky_stars` → `sky_star` |
+| ▶ **다음** | **3주차 #1 — Title Scene 다듬기** | 3주차 framework 신규 도입 0건이라 7주차 화면 작업 당겨옴. §7 3주차 #1 참조 |
+| ⏸ 대기 | 3주차 #2~#4, 그리고 4~8주차 전부 | |
 
 ### 9.2 빌드 / 동작 확인 상태
 
@@ -753,7 +761,7 @@ DragonFlight 4/9 의 최종 enum 순서 `BACKGROUND, PLAYER, BULLET, ENEMY, CONT
 12. **Layer enum 을 미리 다 채워두기** — framework 패턴은 **클래스 도입 commit 에서 layer 도 같이 추가**하는 incremental. 미래 layer 를 미리 적어두면 debug 의 `[1,1,3,0,0,0]` 처럼 빈 자리가 보이고, 클래스 없이 layer 만 있는 어색한 중간 상태가 됨 (§10.5 표 참조). #1 에서 6개 enum 한꺼번에 만든 실수를 #4 직후 incremental 로 정정함.
 13. **placeholder 배경 비트맵이 tileable 하지 않음** — `VertScrollBackground` 는 비트맵을 세로로 반복 타일링하므로 **비트맵 자체가 위/아래 edge 가 이어져야** 이음새가 안 보임. DragonFlight 의 `df_bg.png` (384×512) 는 손으로 그려 자연스럽게 이어지게 디자인. PowerShell 로 random-stars 를 뿌릴 때는 **상하 edge 부근(예: y < 60, y > tileHeight-60) 에는 별을 찍지 않음** → 이음새 영역이 순수 배경색이라 seamless. 처음 #2 에서 0~1600 전구간에 별을 찍어 이음새가 보였던 문제를 #4 직후 60px buffer 로 정정함.
 14. **`Gauge.thickness` 를 픽셀 단위로 줌** — `Gauge.draw(canvas, x, y, scale, progress)` 는 내부에서 `canvas.scale(scale, scale)` 후 1.0 단위 좌표계에 선을 그린다. 따라서 **`thickness` 도 1.0 단위**다. 실제 화면 두께 ≈ `thickness × scale`. 14f 같은 픽셀값을 넘기면 (예: scale=540 일 때) 7560 픽셀 두께 선이 그려져 **화면 전체가 단색으로 덮임**. DragonFlight 의 `enemy_gauge` / `player_gauge` 가 모두 0.1f 인 것이 단서. PlayerHpHud 첫 구현에서 14f 로 줬다가 화면 전체가 빨강으로 변해 1주차 #6 직후 0.025f 로 정정.
-15. **`VertScrollBackground` 비트맵의 위/아래 buffer 부족으로 tile 이음새가 보임** — `VertScrollBackground` 가 비트맵을 단순 반복 타일링하므로 **위/아래 edge 부근에 시각 요소가 있으면 두 tile 의 경계가 "줄"처럼 보인다**. 2_Project (2주차 스냅샷) 의 `clouds.png` (900×600) 를 분석해 보면 **상단 80px 완전 투명, 80~200px fade in (알파 12→95), 200~500px full, 500~600px fade out** — 즉 **전체 50% 가 buffer/fade 영역**이다. seamless 효과의 정체는 `VertScrollBackground` 코드가 아니라 비트맵 디자인. Sky Blaster 의 `sky_stars.png` 도 같은 패턴(위/아래 150px 투명 + 150~300 / 900~1050 fade + 300~900 full) 으로 재생성하여 2주차 #2 완료. 처음에는 buffer 100px + hard cutoff 였는데 사용자가 시각적으로 끊기는 느낌을 지적해 정정.
+15. **`VertScrollBackground` 비트맵의 위/아래 buffer 부족으로 tile 이음새가 보임** — `VertScrollBackground` 가 비트맵을 단순 반복 타일링하므로 **위/아래 edge 부근에 시각 요소가 있으면 두 tile 의 경계가 "줄"처럼 보인다**. 2_Project (2주차 스냅샷) 의 `clouds.png` (900×600) 를 분석해 보면 **상단 80px 완전 투명, 80~200px fade in (알파 12→95), 200~500px full, 500~600px fade out** — 즉 **전체 50% 가 buffer/fade 영역**이다. seamless 효과의 정체는 `VertScrollBackground` 코드가 아니라 비트맵 디자인. Sky Blaster 의 `sky_star.png` 도 같은 패턴(위/아래 150px 투명 + 150~300 / 900~1050 fade + 300~900 full) 으로 재생성하여 2주차 #2 완료. 처음에는 buffer 100px + hard cutoff 였는데 사용자가 시각적으로 끊기는 느낌을 지적해 정정.
 
 ---
 

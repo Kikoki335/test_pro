@@ -22,12 +22,13 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
     override val clipsRect = true
 
     private val background = VertScrollBackground(gctx, R.mipmap.sky_bg, BACKGROUND_SPEED)
-    private val stars = VertScrollBackground(gctx, R.mipmap.sky_stars, STARS_SPEED)
+    private val stars = VertScrollBackground(gctx, R.mipmap.sky_star, STARS_SPEED)
     val player = Player(gctx)
     private val enemyGenerator = EnemyGenerator(gctx)
     private val collisionChecker = CollisionChecker(gctx)
     private val scoreLabel = ScoreLabel(gctx)
     private val playerHpHud = PlayerHpHud(gctx)
+    private val bossTimerHud = BossTimerHud(gctx)
 
     var score = 0
         private set
@@ -40,6 +41,7 @@ class MainScene(gctx: GameContext) : Scene(gctx) {
         add(collisionChecker, Layer.CONTROLLER)
         add(scoreLabel, Layer.UI)
         add(playerHpHud, Layer.UI)
+        add(bossTimerHud, Layer.UI)
     }
 
     fun addScore(amount: Int) {
