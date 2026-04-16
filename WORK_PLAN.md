@@ -47,7 +47,7 @@ E:/test 의 Sky Blaster (종스크롤 슈팅 × 로그라이크) 안드로이드
 
 ### 1.3 기간
 
-8주, 2026-04-06 시작 ~ 2026-05-31 종료. 현재 3주차 진입 직전 (1주차 #1~#6 + 2주차 #1~#4 완료, 2026-05-01 기준).
+8주, 2026-04-06 시작 ~ 2026-05-31 종료. 현재 3주차 진입 직전 (1주차 #1~#6 + 2주차 #1~#5 완료, 2026-05-01 기준).
 
 ---
 
@@ -417,7 +417,7 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
   - 상단에 점수 표시 — Enemy 처치 시 점수 가산 (10/20/30)
 - **1주차 종료 후 게임 한 사이클**: 배경 흐름 + Player 자유 이동 + 자동 발사 + 적 spawn + Bullet↔Enemy 충돌 + Player↔Enemy 충돌 + 점수/HP 변동.
 
-### 2주차 (~4/17, 누적) — 4 commits
+### 2주차 (~4/17, 누적) — 5 commits *(6주차 보스 Scene 진입 흐름 일부 당겨옴)*
 
 #### [x] #1 — 별 parallax 레이어 *(완료, 2026-05-01)*
 
@@ -480,6 +480,23 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
   - 좌하단: "HP" 라벨 + 초록 게이지 (남은 비율 따라 줄어듦)
   - 가로 회전 시 활성 자세 잠금 (nosensor)
 - **§7 §2.3 정책 어긋남 인정**: 1~6주차 placeholder 약속에서 — 이번 주차에서 이미 진짜 에셋 PNG 들이 들어와 있음. §10.5 placeholder 컨벤션은 그대로 두되 §2.3 에 "별 / 캐릭터 에셋은 2주차에 사용자 결정으로 당겨옴" 메모는 추후 정리.
+
+#### [x] #5 — MainScene → BossScene 전환 흐름 (placeholder) *(완료, 2026-05-01)*
+
+> 6주차 #2 ("보스 Scene 진입 흐름") 의 핵심 — 시간 경과 시 Scene 전환 — 만 placeholder 형태로 당겨옴. 실제 보스 타일맵·패턴·HP·전투는 6주차 sub-task 에서 채움. 새 framework 도입 없이 1주차 도구(`Scene`, `SceneStack.change`) 만 사용.
+
+- **활용 framework**:
+  - `Scene` 추상 클래스 + `Scene.change()` (= `gctx.sceneStack.change(this)`) — 1주차 framework
+  - `Scene.clipsRect` — 2주차 #2 framework
+- **만든 것**:
+  - `BossScene.kt` 신규 — `Scene(gctx)` 상속, `clipsRect = true`. `world` 없이 `draw()` 만 override (어두운 보라 배경 `#140020` + "BOSS STAGE" 큰 주황 텍스트 + "(boss content arrives in week 6)" 안내). update 는 base 의 `world?.update(gctx)` (null 이라 no-op) 그대로 사용.
+  - `MainScene.kt` — `var elapsedSec = 0f` (private set, public read) + `private var bossEntered = false`. `override fun update(gctx)` 추가: `super.update(gctx)` 호출 후 `elapsedSec += frameTime`, `BOSS_ENTER_TIME (= 10f)` 도달 시 `BossScene(gctx).change()` 한 번 호출 (bossEntered 플래그로 중복 방지).
+  - `BossTimerHud.kt` — 자체 `elapsedSec` 제거. `draw()` 에서 `(scene as MainScene).elapsedSec` 를 읽어 mm:ss 표시 (= "값은 Scene, 표시는 HUD" 패턴, ScoreLabel/score 와 동일).
+- **기준 동작**:
+  - 게임 시작 후 상단 타이머가 00:00 → 00:10 까지 카운트업
+  - 10초 도달 시 화면이 어두운 보라 배경의 "BOSS STAGE" placeholder 로 즉시 전환
+  - back 버튼: stack 크기 1 (MainScene 이 BossScene 으로 change 되어 stack 에 1개) → Scene.onBackPressed default 로 false 반환 → Activity 가 default back 동작 (앱 종료)
+- **테스트 임시값**: `BOSS_ENTER_TIME = 10f`. 사양(README §1)은 60초. 6주차 #2 에서 60f 로 되돌리고 "보스 진입 선택" UI (즉시 진입 vs 더 기다리기) 분기 추가.
 
 ### 3주차 (~4/24, 누적) — 4 commits *(7주차 화면 작업 당겨옴)*
 
@@ -597,7 +614,7 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 
 #### [ ] #3 — 최종 정리
 
-**총 41 commits** — 1주차 6 + 2주차 4 + 3주차 4 + 4주차 6 + 5주차 4 + 6주차 7 + 7주차 7 + 8주차 3. (Scene 작업과 Character 작업 분리 원칙 §2.2#5 적용)
+**총 42 commits** — 1주차 6 + 2주차 5 + 3주차 4 + 4주차 6 + 5주차 4 + 6주차 7 + 7주차 7 + 8주차 3. (Scene 작업과 Character 작업 분리 원칙 §2.2#5 적용)
 
 ---
 
@@ -613,6 +630,7 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 | 타이틀/Pause/Result 화면 | 7주차 | 3주차 | 3주차 framework 추가 0건. 새 시스템 도입 근거 없음 → 1주차에 깐 SceneStack 위에 화면만 올리는 작업으로 채움 |
 | 능력치 증가 (데미지/공속/치명) | 5주차 | 4주차 | 단순 변수 곱셈. 4주차 Registry 패턴으로 보상 카드 종류만 추가하면 같은 framework 사용 |
 | 보스 진입 타이머 UI 자리 | 5주차 | 4주차(자리), 5주차(동작), 6주차(실제 진입) | UI 자리는 4주차 HUD 작업과 같이, 진입 선택 동작은 5주차, 보스 자체는 6주차 |
+| 보스 Scene 진입 흐름 (placeholder Scene 으로 전환) | 6주차 #2 | 2주차 #5 | 사용자가 보스 타일맵 에셋 받아오는 동안 화면 전환 흐름만 미리 만들어 두고 싶다는 결정. `Scene.change` 호출 패턴 자체는 1주차 framework 로 가능 (새 도구 도입 X). 보스 본체(타일맵/패턴/HP) 는 6주차에 그대로 남음 — 그때 `BossScene` placeholder 만 채우면 됨 |
 
 ### 8.2 DragonFlight 4/10 패턴과 의도적으로 다른 부분
 
@@ -628,7 +646,7 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 | 입력 시작점 | JoyStick → Player 직접 처리로 진화 | 처음부터 Player 직접 처리 | 4/10 시점 framework 가 이미 도달한 최종형(`9e232ab`)을 따라감. 중간 JoyStick 단계는 학습용이라 안 거침 |
 | MainScene Layer 순서 | BACKGROUND, PLAYER, BULLET, ENEMY, CONTROLLER, UI | (1주차 #1 에서 동일하게 맞춤) | framework 와 동일 — Player 가 아래, Bullet/Enemy 가 위에 그려짐 |
 | Bullet `power` 필드 | `init(...power)` 로 받아 `enemy.decreaseLife(bullet.power)` | `Bullet.DAMAGE = 1` 상수 | 1주차에는 무기 1종 (자동 직진 발사) 뿐이라 데미지 다양화 불필요. 4주차 무기 시스템(Dual/Triple/Laser) 도입 시 `power` 필드로 교체 |
-| Enemy collisionRect inset | dstRect 기준 11f 안쪽 inset (날개 등 시각 여백 보정) | inset 없이 dstRect 그대로 (`updateCollisionRect` 가 단순 박스 복사) | placeholder 가 단순 빨간 원/주황 삼각/보라 사각이라 시각 여백이 거의 없음. 7주차 그래픽 교체 시 종별 inset 재산정 |
+| collisionRect inset | dstRect 기준 11f 절대값 inset (Enemy 만) | **모든 IBoxCollidable (Player/Bullet/Enemy) 에 width·height × 0.8 비율 inset** — 양쪽 10% 씩 안쪽으로 | 처음에는 placeholder 단순 도형이라 inset 없이 시작 → 진짜 캐릭터 PNG 도입(2주차 #4) 후 투명 여백/시각 외곽이 충돌에 잡혀 "스쳤는데 부딪힘" 느낌 발생 → 모든 객체 일률 0.8 비율로 적용 (절대값 11f 보다 비율이 더 robust — 사이즈 변경 시 자동 추종) |
 | 충돌 시점 분리 | 4/9 시점에 Bullet↔Enemy + Player↔Enemy 동시 도입 | #5 (Bullet↔Enemy + Enemy gauge) 와 #6 (Player↔Enemy + HUD) 로 분리 | §2.2#5 분리 정책. "Enemy 자체의 self-contained 동작 (소환/체력/처치)" 과 "플레이어 피격/HUD" 를 다른 commit 으로 |
 | 두 번째 parallax 레이어 (2주차 #1) | 구름 (`clouds.png`) | 별 (`sky_star.png`) — `STARS` layer | Sky Blaster 의 우주/밤하늘 컨셉. 별이 빠르게 흐르면 우주선이 별빛 사이를 통과하는 느낌이 살아남. framework 학습 목표(두 번째 `VertScrollBackground` 인스턴스)는 그대로 충족 |
 
@@ -636,7 +654,7 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 
 ## 9. 현재 진척
 
-> **마지막 갱신**: 2026-05-01 (2주차 #4 완료 — AndroidManifest 메타 + HUD 자리 잡기 (BossTimerHud 신규, PlayerHpHud 좌하단·초록 재배치, sky_star 코드 참조 일관). 2주차 전체(#1~#4) 종료. 다음은 3주차 #1 — Title Scene 다듬기)
+> **마지막 갱신**: 2026-05-01 (2주차 #5 완료 — MainScene → BossScene placeholder 전환. 사용자 보스 타일맵 수집 중이라 6주차 #2 의 진입 흐름만 먼저 당겨옴. BOSS_ENTER_TIME 은 테스트용 10f. 2주차 전체(#1~#5) 종료. 다음은 3주차 #1 — Title Scene 다듬기)
 
 ### 9.1 완료 / 진행 / 다음
 
@@ -651,7 +669,8 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 | ✅ 완료 | 2주차 #1 — 별 parallax 레이어 (구름 대신 별, §8.2) | `sky_bg.png` 별 빼고 단색 (`#0B1B3A`) + `sky_star.png` 신규, `STARS` layer (ENEMY 뒤·CONTROLLER 앞), `STARS_SPEED = 120f` |
 | ✅ 완료 | 2주차 #2 — a2dg framework 갱신 (Scene.clipRect + GameMetrics.borderRect + GameView clip) | 2_Project 4/13 `3300abc`+`10492d7` 의 변경분 그대로 가져옴, MainScene `clipsRect = true` |
 | ✅ 완료 | 2주차 #3 — sky_star.png seamless 재생성 (clouds 패턴 적용) | clouds.png 의 50% buffer/fade 비율을 별 비트맵에 옮김. 이후 사용자가 진짜 별 에셋으로 교체 |
-| ✅ 완료 | 2주차 #4 — AndroidManifest 정리 + HUD 자리 잡기 | `appCategory="game"` + `screenOrientation="nosensor"`, `PlayerHpHud` 좌하단·초록 + HP 라벨, `BossTimerHud` 신규 (상단 중앙 둥근 박스 placeholder), code reference `sky_stars` → `sky_star` |
+| ✅ 완료 | 2주차 #4 — AndroidManifest 정리 + HUD 자리 잡기 | `appCategory="game"` + `screenOrientation="nosensor"`, `PlayerHpHud` 좌하단·초록 + HP 라벨, `BossTimerHud` 신규, code reference `sky_stars` → `sky_star` |
+| ✅ 완료 | 2주차 #5 — MainScene → BossScene 전환 흐름 (placeholder, 6주차에서 당겨옴) | `BossScene` placeholder 신규, `MainScene.elapsedSec` + 10초 임시값 도달 시 `Scene.change()`, `BossTimerHud` 가 Scene 의 elapsedSec 읽기로 통일 |
 | ▶ **다음** | **3주차 #1 — Title Scene 다듬기** | 3주차 framework 신규 도입 0건이라 7주차 화면 작업 당겨옴. §7 3주차 #1 참조 |
 | ⏸ 대기 | 3주차 #2~#4, 그리고 4~8주차 전부 | |
 
@@ -696,10 +715,10 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 
 ### 10.2 Player
 
-- 크기: **100×100** (placeholder 가시성을 위해 80→100 으로 조정, `Player.PLAYER_WIDTH/HEIGHT`)
-- 시작 위치: `(metrics.width / 2, metrics.height - PLAYER_HEIGHT * 1.5f)` = `(450, 1450)` (화면 하단 중앙)
+- 크기: **140×140** (placeholder 80→100→140 단계로 키움. 진짜 캐릭터 PNG 로 교체 후 모바일 종스크롤 슈팅 표준 비율(화면 폭의 ~15%)에 맞춰 140 으로 정착, `Player.PLAYER_WIDTH/HEIGHT`)
+- 시작 위치: `(metrics.width / 2, metrics.height - PLAYER_HEIGHT * 1.5f)` = `(450, 1390)` (화면 하단 중앙)
 - 시작 HP: 5 (Enemy 1마리 부딪히면 1 감소) — 5번 sub-task 에서 도입
-- 이동: framework lerp 패턴 (`targetX/Y`, `SPEED = 1500f` per second). 화면 경계 안에서 clamp.
+- 이동: framework lerp 패턴 (`targetX/Y`, `SPEED = 1100f` per second. 1500→1100 으로 줄임 — 캐릭터가 커진 만큼 회피 난이도 보정). 화면 경계 안에서 clamp.
 - 발사 간격: 0.3초 (FIRE_INTERVAL) — 3번 sub-task 에서 도입
 - Bullet 데미지: 1 (4주차 능력치 곱셈 적용)
 
@@ -716,9 +735,12 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 
 | 종류 | placeholder | width×height | HP | 속도 (아래 방향) | 점수 (#6 에서 부여) |
 |---|---|---|---|---|---|
-| `Type.SUICIDE` | 빨간 원 (`#EF4444`) | 70×70 | 1 | 400f/s | 10 |
-| `Type.RANGED` | 주황 삼각 (`#F97316`) | 80×80 | 2 | 200f/s | 20 |
-| `Type.SPLIT` | 보라 사각 (`#A855F7`) | 60×60 | 3 | 300f/s | 30 |
+| `Type.SUICIDE` | 빨간 원 (`#EF4444`, 진짜 에셋 교체됨) | 95×95 | 1 | 280f/s | 10 |
+| `Type.RANGED` | 주황 삼각 (`#F97316`, 진짜 에셋 교체됨) | 110×110 | 2 | 150f/s | 20 |
+| `Type.SPLIT` | 보라 사각 (`#A855F7`, 진짜 에셋 교체됨) | 85×85 | 3 | 220f/s | 30 |
+
+> 크기·속도는 한 번 일괄 조정됨 — 진짜 캐릭터 에셋으로 교체된 시점(2주차 #4 직후)에 시각적 박력을 위해 30~40% 키우고 같은 비율로 속도 25~30% 감소시켜 회피 난이도 유지.
+> 충돌 박스(`collisionRect`) 는 모든 IBoxCollidable 에 width·height × 0.8 inset 적용 (양쪽 10% 씩 안쪽). 캐릭터 PNG 의 투명 여백 보정. (§8.2)
 
 EnemyGenerator: spawn 간격 `GEN_INTERVAL = 1.0f` (단순 1마리/1초). 8주차 밸런스 단계에서 wave 시스템 검토.
 

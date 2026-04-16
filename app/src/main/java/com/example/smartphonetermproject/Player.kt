@@ -13,11 +13,16 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder),
     override var x = gctx.metrics.width / 2f
     override var y = gctx.metrics.height - PLAYER_HEIGHT * 1.5f
 
-    // Player 충돌 박스는 그림 영역(dstRect)과 동일하게 본다.
-    // syncDstRect() 가 update() 마다 dstRect 를 최신 위치로 맞추므로,
-    // 별도 RectF 를 들고 있을 필요 없이 dstRect 를 그대로 노출한다.
+    // 충돌 박스는 그림 영역(dstRect)보다 살짝 안쪽 (가로·세로 80%) 으로 줄여 둔다.
+    // 진짜 캐릭터 PNG 의 투명 여백/비주얼 외곽을 고려해 "스쳤다" 싶은 충돌이 덜 잡히도록.
+    private val _collisionRect = RectF()
     override val collisionRect: RectF
-        get() = dstRect
+        get() {
+            val halfW = width * COLLISION_INSET_RATIO / 2f
+            val halfH = height * COLLISION_INSET_RATIO / 2f
+            _collisionRect.set(x - halfW, y - halfH, x + halfW, y + halfH)
+            return _collisionRect
+        }
 
     var life = MAX_LIFE
         private set
@@ -85,11 +90,12 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder),
     }
 
     companion object {
-        const val SPEED = 1500f
-        const val PLAYER_WIDTH = 100f
-        const val PLAYER_HEIGHT = 100f
+        const val SPEED = 1100f
+        const val PLAYER_WIDTH = 140f
+        const val PLAYER_HEIGHT = 140f
         const val FIRE_INTERVAL = 0.3f
         const val BULLET_OFFSET = 8f
         const val MAX_LIFE = 5
+        private const val COLLISION_INSET_RATIO = 0.8f
     }
 }

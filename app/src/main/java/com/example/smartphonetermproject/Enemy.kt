@@ -21,9 +21,9 @@ class Enemy private constructor(
         val speed: Float,
         val score: Int,
     ) {
-        SUICIDE(R.mipmap.enemy_suicide, 70f, 70f, 1, 400f, 10),
-        RANGED(R.mipmap.enemy_ranged, 80f, 80f, 2, 200f, 20),
-        SPLIT(R.mipmap.enemy_split, 60f, 60f, 3, 300f, 30),
+        SUICIDE(R.mipmap.enemy_suicide, 95f, 95f, 1, 280f, 10),
+        RANGED(R.mipmap.enemy_ranged, 110f, 110f, 2, 150f, 20),
+        SPLIT(R.mipmap.enemy_split, 85f, 85f, 3, 220f, 30),
     }
 
     val score: Int
@@ -100,13 +100,10 @@ class Enemy private constructor(
     }
 
     private fun updateCollisionRect() {
-        // 1주차 placeholder 는 inset 없이 dstRect 그대로 사용.
-        collisionRect.set(
-            x - width / 2f,
-            y - height / 2f,
-            x + width / 2f,
-            y + height / 2f,
-        )
+        // 충돌 박스는 그림 영역의 80% (양쪽 10% 씩 안쪽으로) — 캐릭터 PNG 의 투명 여백 보정.
+        val halfW = width * COLLISION_INSET_RATIO / 2f
+        val halfH = height * COLLISION_INSET_RATIO / 2f
+        collisionRect.set(x - halfW, y - halfH, x + halfW, y + halfH)
     }
 
     override fun onRecycle() {
@@ -119,6 +116,7 @@ class Enemy private constructor(
         private val GAUGE_FG_COLOR = Color.GREEN
         private val GAUGE_BG_COLOR = Color.argb(180, 0, 0, 0)
         private const val GAUGE_OFFSET_FROM_TOP = 8f
+        private const val COLLISION_INSET_RATIO = 0.8f
 
         fun get(gctx: GameContext, x: Float, type: Type): Enemy {
             val scene = gctx.scene as? MainScene ?: return Enemy(gctx).init(x, type)

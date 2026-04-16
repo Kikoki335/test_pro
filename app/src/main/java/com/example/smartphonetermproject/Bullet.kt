@@ -14,11 +14,15 @@ class Bullet private constructor(
     override var x = 0f
     override var y = 0f
 
-    // Bullet 의 충돌 박스는 그림 영역(dstRect)과 동일하게 본다.
-    // syncDstRect() 가 매 update() 에서 dstRect 를 최신 위치로 맞추므로
-    // collisionRect 를 별도로 저장/갱신할 필요 없이 dstRect 를 그대로 노출한다.
+    // Bullet 의 충돌 박스도 그림 영역보다 80% 안쪽으로 줄여 캐릭터/적과 같은 inset 룰을 따른다.
+    private val _collisionRect = RectF()
     override val collisionRect: RectF
-        get() = dstRect
+        get() {
+            val halfW = width * COLLISION_INSET_RATIO / 2f
+            val halfH = height * COLLISION_INSET_RATIO / 2f
+            _collisionRect.set(x - halfW, y - halfH, x + halfW, y + halfH)
+            return _collisionRect
+        }
 
     init {
         syncDstRect()
@@ -52,6 +56,7 @@ class Bullet private constructor(
         // 1주차 무기는 1종이라 데미지를 상수로 둔다.
         // 4주차 무기 시스템에서 Bullet.power 필드로 교체 예정.
         const val DAMAGE = 1
+        private const val COLLISION_INSET_RATIO = 0.8f
 
         fun get(gctx: GameContext, x: Float, y: Float): Bullet {
             val scene = gctx.scene as? MainScene ?: return Bullet(gctx).init(x, y)

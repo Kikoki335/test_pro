@@ -4,7 +4,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0B1B3A"
+    android:background="@mipmap/title_bg"
     tools:context=".MainActivity">
 
     <TextView
@@ -17,17 +17,11 @@
         android:textSize="48sp"
         android:textStyle="bold" />
 
-    <LinearLayout
+    <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:padding="50dp"
-        android:background="#80FFFFFF">
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/start_sky_blaster"
-            android:onClick="onStartGameClicked" />
-    </LinearLayout>
+        android:text="@string/start_sky_blaster"
+        android:onClick="onStartGameClicked" />
 
 </RelativeLayout>
