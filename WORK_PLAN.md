@@ -47,7 +47,7 @@ E:/test 의 Sky Blaster (종스크롤 슈팅 × 로그라이크) 안드로이드
 
 ### 1.3 기간
 
-8주, 2026-04-06 시작 ~ 2026-05-31 종료. 현재 3주차 진입 직전 (1주차 #1~#6 + 2주차 #1~#5 완료, 2026-05-01 기준).
+8주, 2026-04-06 시작 ~ 2026-05-31 종료. 현재 3주차 진입 직전 (1주차 #1~#5 + 2주차 #1~#7 완료, 2026-05-01 기준. plan 재배치로 monster/충돌+HUD 가 2주차로, BossScene 전환이 1주차로 옮겨감).
 
 ---
 
@@ -302,7 +302,7 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
 
 각 sub-task 는 1 commit (사용자의 텀프로젝트 repo 기준). 주당 3~7 commit 범위.
 
-### 1주차 (~4/10) — 6 commits
+### 1주차 (~4/10) — 5 commits *(원래 6 commits 였으나 Enemy + Player 충돌/HUD 가 2주차로 옮겨가고, 시간 경과 시 보스 placeholder Scene 전환을 6주차에서 1주차로 당겨와 5 commits 가 됨, §8.1)*
 
 #### [x] #1 — 타이틀 → GAME START → 빈 게임 화면 *(완료, 2026-05-01)*
 
@@ -339,7 +339,7 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
   - DragonFlight reference: `git show 9e232ab:andprj/DragonFlight/app/src/main/java/.../Player.kt` (`targetX` + `coerceIn` 패턴)
 - **만든 것**:
   - `app/src/main/res/mipmap-xxxhdpi/player_placeholder.png` (160×160 파란 삼각형 placeholder)
-  - `app/.../Player.kt` — `Sprite(R.mipmap.player_placeholder)` 상속, 100×100, 시작 `(450, 1450)`. `targetX/Y` + `hypot` 거리 기반 SPEED 1500f 보간. `onTouchEvent(ACTION_DOWN/MOVE)` 에서 `metrics.fromScreen` → `targetX/Y` 갱신, 화면 경계 clamp.
+  - `app/.../Player.kt` — `Sprite(R.mipmap.player_placeholder)` 상속. **정착값(§10.2) 처음부터 사용**: `PLAYER_WIDTH/HEIGHT = 140`, 시작 `(metrics.width/2, metrics.height - PLAYER_HEIGHT * 1.5f)`, `SPEED = 1100f`. `targetX/Y` + `hypot` 거리 기반 보간. `onTouchEvent(ACTION_DOWN/MOVE)` 에서 `metrics.fromScreen` → `targetX/Y` 갱신, 화면 경계 clamp. (이전 placeholder 시점에는 100×100 / SPEED 1500f 였으나 진짜 캐릭터 PNG 도입 후 일괄 조정됨 — 다음 세션은 정착값으로 시작)
   - `MainScene.kt` 에 `private val player = Player(gctx)` 추가, `world.add(player, Layer.PLAYER)`, `onTouchEvent(event)` 를 `player.onTouchEvent(event)` 로 위임
 - **기준 동작**:
   - 화면 어디든 터치/드래그하면 Player 가 그 위치로 따라옴 (X+Y 자유 이동)
@@ -361,7 +361,22 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
   - 화면 밖 Bullet 은 self-remove + 재활용. debug 좌상단 layer counts 가 안정적 (Bullet 풀 누적되어 1개 풀에서 돌려쓰는 것을 확인 가능)
 - **`IBoxCollidable` 미포함, `power` 미포함**: `IBoxCollidable` 은 다음 #5 (몬스터 소환 + Bullet 충돌 + Enemy HP gauge) 에서 Enemy 와 같이 추가. `power` 는 4주차 무기 시스템에서 도입 (그 전까지는 `Bullet.DAMAGE = 1` 상수). DragonFlight 4/9 Bullet 은 `power` 까지 포함되어 있지만, Sky Blaster 1주차에는 무기 종류가 1종이라 상수로 시작.
 
-#### [x] #5 — Enemy 3종 + EnemyGenerator + Bullet↔Enemy 충돌 + Enemy HP Gauge (`CONTROLLER` layer) *(완료, 2026-05-01)*
+#### [x] #5 — 시간 경과 시 보스 placeholder Scene 전환 *(완료, 2026-05-01. 원래 6주차 #2 였던 작업을 1주차로 당김 — §8.1)*
+
+- **활용 framework**:
+  - `Scene` 추상 클래스 + `Scene.change()` (= `gctx.sceneStack.change(this)`) — 1주차 framework
+- **만들 것 (다음 세션이 따라갈 가이드)**:
+  - `BossScene.kt` 신규 — 단순한 placeholder Scene. world 없이, draw 만 override 해서 임시 단색 / 텍스트만. 실제 보스 컨텐츠는 6주차 sub-task 에서 채움. (현 working tree 의 BossScene 은 2주차 #7 에서 노말맵화되므로 1주차 #5 시점의 BossScene 은 그보다 단순한 placeholder)
+  - `MainScene` 에 `var elapsedSec = 0f` (private set, public read), `private var bossEntered`, `BOSS_ENTER_TIME = 10f` (테스트용 임시값, 실 사양은 60f).
+  - `MainScene.update()` override: `super.update(gctx)` 후 elapsedSec 누적, 임계 도달 시 `BossScene(gctx).change()` 한 번만 호출.
+- **기준 동작**: 게임 시작 후 elapsedSec 이 10초 도달하면 화면이 placeholder BossScene 으로 즉시 교체.
+- **주의**: 1주차 #5 시점에는 monster / 점수 / HP 가 아직 없는 상태이므로 BossScene 전환만 동작 검증되는 단순 demo 단계. monster + 점수 + HP 는 2주차 #5/#6 에서 합류.
+
+---
+
+> **이하 §7 1주차 #5/#6 기존 항목 (Enemy 소환 + Player 충돌+HUD) 은 §7 2주차 #5/#6 으로 이동했음. 아래는 자료 보존을 위해 그대로 둠 — 실제 sub-task 분류는 2주차 #5/#6 으로 본다.**
+
+#### [x] #5(구) — Enemy 3종 + EnemyGenerator + Bullet↔Enemy 충돌 + Enemy HP Gauge (`CONTROLLER` layer) → **2주차 #5 로 이동** *(완료, 2026-05-01)*
 
 - **활용 framework**:
   - DragonFlight `Enemy` (4/2 `4e4bc48` → 4/3 `8bde3e8` IBoxCollidable + `15ed809` Gauge + `be491bf` Enemy life Gauge → 4/4 `120ff73` IRecyclable) — `private constructor` + `companion get()` + `bitmap = gctx.res.getBitmap(...)` 재활용 시 swap, `companion object` 에 정적 `Gauge` 공유
@@ -397,7 +412,7 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
   - Player↔Enemy 충돌 미포함 — #6 에서 분리 추가
   - 화면 아래로 빠진 Enemy 는 재활용
 
-#### [x] #6 — Player↔Enemy 충돌 + HUD (Player HP Gauge + Score) *(완료, 2026-05-01)*
+#### [x] #6(구) — Player↔Enemy 충돌 + HUD (Player HP Gauge + Score) → **2주차 #6 으로 이동** *(완료, 2026-05-01)*
 
 - **활용 framework**:
   - `IBoxCollidable` (4/3 8bde3e8) — Player 에 추가
@@ -417,7 +432,7 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
   - 상단에 점수 표시 — Enemy 처치 시 점수 가산 (10/20/30)
 - **1주차 종료 후 게임 한 사이클**: 배경 흐름 + Player 자유 이동 + 자동 발사 + 적 spawn + Bullet↔Enemy 충돌 + Player↔Enemy 충돌 + 점수/HP 변동.
 
-### 2주차 (~4/17, 누적) — 5 commits *(6주차 보스 Scene 진입 흐름 일부 당겨옴)*
+### 2주차 (~4/17, 누적) — 7 commits *(원래 5 commits — 1주차 cutoff (4/10) 이후의 커밋이라 framework 측면에서 자연스러운 2주차 작업인 Enemy 소환과 Player 충돌+HUD 를 1주차에서 옮겨오고, BossScene 노말맵화 작업이 추가됨, §8.1)*
 
 #### [x] #1 — 별 parallax 레이어 *(완료, 2026-05-01)*
 
@@ -481,7 +496,9 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
   - 가로 회전 시 활성 자세 잠금 (nosensor)
 - **§7 §2.3 정책 어긋남 인정**: 1~6주차 placeholder 약속에서 — 이번 주차에서 이미 진짜 에셋 PNG 들이 들어와 있음. §10.5 placeholder 컨벤션은 그대로 두되 §2.3 에 "별 / 캐릭터 에셋은 2주차에 사용자 결정으로 당겨옴" 메모는 추후 정리.
 
-#### [x] #5 — MainScene → BossScene 전환 흐름 (placeholder) *(완료, 2026-05-01)*
+#### [x] #5(구) — MainScene → BossScene 전환 흐름 (placeholder) → **1주차 #5 로 이동** *(완료, 2026-05-01)*
+
+> 새 plan 에서는 이 작업이 1주차 #5 자리. 자료 보존을 위해 본문은 그대로 유지.
 
 > 6주차 #2 ("보스 Scene 진입 흐름") 의 핵심 — 시간 경과 시 Scene 전환 — 만 placeholder 형태로 당겨옴. 실제 보스 타일맵·패턴·HP·전투는 6주차 sub-task 에서 채움. 새 framework 도입 없이 1주차 도구(`Scene`, `SceneStack.change`) 만 사용.
 
@@ -498,31 +515,94 @@ framework 가 DragonFlight 종료, CookieRun (가로스크롤 러닝) 새 게임
   - back 버튼: stack 크기 1 (MainScene 이 BossScene 으로 change 되어 stack 에 1개) → Scene.onBackPressed default 로 false 반환 → Activity 가 default back 동작 (앱 종료)
 - **테스트 임시값**: `BOSS_ENTER_TIME = 10f`. 사양(README §1)은 60초. 6주차 #2 에서 60f 로 되돌리고 "보스 진입 선택" UI (즉시 진입 vs 더 기다리기) 분기 추가.
 
-### 3주차 (~4/24, 누적) — 4 commits *(7주차 화면 작업 당겨옴)*
+#### [x] #5 — Enemy 3종 + EnemyGenerator + Bullet↔Enemy 충돌 + Enemy HP Gauge (`CONTROLLER` layer) *(완료, 2026-05-01. 원래 1주차 #5 였지만 framework cutoff 4/10 이후의 commit `bd9c1a7 몬스터 제작` (Apr 11) 시점이라 2주차로 분류, §8.1)*
 
-framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack 위에서 화면만 추가.
+- **활용 framework**: §7 의 (구 1주차 #5) 본문 그대로. 1주차 #5(구) 의 모든 활용 framework / 만들 것 / 기준 동작 / DragonFlight 와 다른 점이 그대로 유효.
+- **만들 것 (다음 세션이 따라갈 가이드, 정착값 명시)**:
+  - placeholder PNG 3장 (`enemy_suicide.png` 등) — 이미 진짜 캐릭터 에셋으로 교체됨.
+  - `Enemy.kt`의 `Type` enum 에 **정착값 처음부터 사용**: `SUICIDE(95×95, hp=1, speed=280f, score=10)`, `RANGED(110×110, hp=2, speed=150f, score=20)`, `SPLIT(85×85, hp=3, speed=220f, score=30)`. (이전 placeholder 시점 70/80/60 + 400/200/300 은 진짜 PNG 도입 후 일괄 조정됨)
+  - `EnemyGenerator.kt`: `GEN_INTERVAL = 1.0f`.
+  - `Bullet.kt`/`Enemy.kt` 모두 `IBoxCollidable`. **collisionRect inset 0.8 처음부터 적용** — `width × COLLISION_INSET_RATIO / 2` 로 양쪽 10% 씩 안쪽. (§8.2, §10.4)
+  - `Enemy.kt` 의 `companion object` 에 정적 `Gauge` (모든 Enemy 공유, lazy init), draw 에서 머리 위에 HP 비율 표시.
+  - `CollisionChecker.kt` (CONTROLLER layer): BULLET↔ENEMY 만 (Player↔Enemy 는 #6).
 
-#### [ ] #1 — Title Scene 다듬기
+#### [x] #6 — Player↔Enemy 충돌 + 점수 가산 *(완료, 2026-05-01. 원래 1주차 #6 였지만 #5 와 같은 이유로 2주차로, §8.1)*
 
-- 옵션 A: 현재 XML `MainActivity` 유지하고 디자인만 정리 (배경 색조, 버튼 위치, 깜빡이는 별 효과 등)
-- 옵션 B: XML 시작화면을 게임 내 `TitleScene` (Scene 상속) 으로 교체 — `MainActivity` 는 단순 컨테이너, `BaseGameActivity` 가 처음부터 `TitleScene` 을 root scene 으로 push, GAME START 클릭 시 `MainScene.change()`
-- 권장: 옵션 A (XML 유지) — 옵션 B 는 4주차 이후 화면 전환이 많아질 때 검토. 옵션 A 가 framework 패턴 (DragonFlight 도 XML MainActivity)
+- **활용 framework**: §7 의 (구 1주차 #6) 본문 그대로.
+- **만들 것 (다음 세션이 따라갈 가이드, 정착값 명시)**:
+  - `Player.kt` 가 `IBoxCollidable` — **collisionRect inset 0.8 처음부터 적용**.
+  - `Player.kt`: `MAX_LIFE = 5`, `decreaseLife()`, `dead` getter.
+  - `Enemy.Type` 의 `score` 컬럼 SUICIDE 10 / RANGED 20 / SPLIT 30 (#5 에서 이미 정착값으로 두면 이 작업에선 사용만).
+  - `MainScene` 에 `var score = 0` + `addScore(amount)`.
+  - `ScoreLabel.kt` (UI layer) — **`displayScore` 분리 + lerp 처음부터** (a2dg `ImageNumber.update` 의 lerp 패턴: `diff in -9..-1 -> -1`, `1..9 -> 1`, else `diff/10`). 텍스트는 `LabelUtil`. 7주차 #5 에서 `ImageNumber` + 폰트 시트로 교체하되 displayValue 패턴은 유지.
+  - `PlayerHpHud.kt` (UI layer) — **시안(02_normal_stage.png) 에 맞게 처음부터 좌하단 + 초록 색**, `Gauge.thickness` 는 1.0 단위(예: 0.04f) 주의 (§11#14).
+  - `CollisionChecker` 에 PLAYER↔ENEMY 추가, `player.dead` 시 `Activity.finish()` (3주차 #4 에서 ResultScene 으로 교체).
 
-#### [ ] #2 — Pause Scene (반투명 overlay)
+#### [x] #7 — BossScene = 노말맵 + 배경만 다르게 + 시작화면 박스 제거 *(완료, 2026-05-01)*
 
-- `PauseScene : Scene(gctx)` — `world` 없이 `update`/`draw` 직접 override. `draw` 에서 반투명 검정 사각 (`canvas.drawColor(0x80000000.toInt())`) 위에 Resume / Restart / Quit 버튼 (텍스트로) 그리기
-- `MainScene.onBackPressed()` 에서 `PauseScene(gctx).push()` — Scene.kt 의 기본 구현은 pop 이므로 override 필요
-- Pause Scene 이 active 일 때 MainScene 의 update 는 stack top 만 update 받으므로 자연히 멈춤
+- **활용 framework**: 1주차 framework 만 (Scene 상속 + 생성자 파라미터).
+- **만들 것 (다음 세션이 따라갈 가이드)**:
+  - `MainScene` 을 **`open class`** 로 + 생성자 파라미터 두 개 추가 — `backgroundResId: Int = R.mipmap.sky_bg`, `isBossStage: Boolean = false`. `bossEntered` 초기값 = `isBossStage` 로 두면 보스 인스턴스는 시작부터 트리거 막힘.
+  - `BossScene.kt` = **MainScene 을 상속한 한 줄 wrapper**: `class BossScene(gctx) : MainScene(gctx, R.mipmap.boss_bg, isBossStage = true)`. 게임 로직(Player/Bullet/Enemy/충돌/HUD/타이머) 다 그대로 쓰고 배경만 `boss_bg` 로 다름.
+  - `activity_main.xml` — GAME START 버튼 감싸던 LinearLayout (반투명 박스) 제거하고 Button 만 RelativeLayout 직속에.
+  - 배경 리소스 매핑: `sky_bg` = 노말맵, `boss_bg` = 보스맵, `title_bg` = 시작화면. (사용자가 받은 진짜 에셋 PNG 들이 이 자리에 들어감)
+  - 6주차 sub-task 는 BossScene 에 보스 캐릭터/패턴/HP gauge/진입 연출 등을 override 로 추가.
 
-#### [ ] #3 — Result Scene 골격
+### 3주차 (~4/24, 누적) — 5 commits *(Enemy 공격 행동 + VFX — 원래 들어 있던 화면 작업은 7~8주차로 분산 이동, §8.1. VFX 도 7주차에서 당겨옴 — 사용자가 에셋 미리 제공)*
 
-- `ResultScene : Scene(gctx)` — GAME OVER / BOSS CLEAR 텍스트, 점수·플레이 시간 표시. Retry → MainScene change, Title → MainActivity 로 finish
+framework 추가 0건이므로 새 시스템 도입 X. 1·2주차 누적 도구 (`when type` 분기, `IRecyclable` ObjectPool, `CollisionChecker`, `Layer` enum 확장) 만으로 구현.
 
-#### [ ] #4 — Scene 전환 흐름 정리
+SUICIDE → RANGED → SPLIT 순서로 한 종류씩 도입하며 검증. 자폭/원거리/분열 동작이 미완 상태에서 다른 종류가 같이 spawn 되면 무엇이 어디서 깨지는지 분리하기 어렵기 때문에, 각 단계에서 `EnemyGenerator` 는 그 sub-task 에서 작업 중인 종류만 spawn 하도록 임시 수정하고, 마지막 sub-task 에서 random 복원.
 
-- Player.life ≤ 0 → `gctx.sceneStack.change(ResultScene(gctx, isWin = false, score, playTime))`
-- Pause Scene 의 Restart → `gctx.sceneStack.change(MainScene(gctx))` (현재 Pause 와 그 아래 MainScene 둘 다 교체)
-- Pause Scene 의 Quit → 전부 pop 해서 Activity finish
+#### [ ] #1 — SUICIDE 자폭
+
+- `Enemy.update` 를 type 별 `when` 분기 베이스로 교체. RANGED/SPLIT 은 일단 기존 직선 하강 그대로 두고 SUICIDE 만 새 동작.
+- SUICIDE 동작: 화면 위에서 직선 하강 → y 가 화면 높이 40% 지점 (`SUICIDE_LOCK_RATIO`) 도달 시 그 시점 Player 위치를 향해 lock-on → 그 방향으로 `SUICIDE_DIVE_MUL = 1.6f` 속도로 직진. **lock 시점 한 번만 읽어 방향 고정 — 이후 추적 X.** 자폭병의 "결심하면 끝까지 직진" 느낌. 빗나가면 화면 밖으로 빠져나가게 둠.
+- `Enemy.Type.hitDamage` 필드 추가 — `SUICIDE = 2`, `RANGED = 1`, `SPLIT = 1`. `CollisionChecker.PLAYER_HIT_DAMAGE` 상수 제거하고 `enemy.hitDamage` 로 교체.
+- 화면 밖 검사 확장 — dive 가 사선이라 좌·우로도 벗어날 수 있으므로 X 방향 검사 추가.
+- recycle 시 dive 상태 reset — `init()` 에서 `diving = false`, dive 속도 0 으로.
+- `EnemyGenerator` 임시 수정: `Type.SUICIDE` 만 spawn. 주석에 "RANGED 는 #2, SPLIT 은 #3, random 복원은 #4" 명시.
+
+#### [x] #2 — RANGED 원거리 공격 + EnemyBullet *(검증 완료, 2026-05-01)*
+
+- `EnemyBullet` 클래스 신규 — Bullet 의 ObjectPool 패턴 (`private constructor` + `IRecyclable` + `get(...)`) 그대로 복제. **자유 방향 (`vx, vy`) 인자 처음부터** (default = 직하 fallback). 사이즈 56×84, speed 700f/s, damage 1. 화면 밖 검사는 사방 (aimed 탄이 좌·우·위로도 빠질 수 있음).
+- `MainScene.Layer` 에 `ENEMY_BULLET` 추가 (`ENEMY` 와 `STARS` 사이 — 적 위에 그려지되 별·UI 뒤).
+- RANGED 동작 (정착): `APPROACHING → ATTACKING` 2단계만. 화면 높이 [`RANGED_STOP_RATIO_MIN = 0.22`, `MAX = 0.35`] 사이 spawn 시점 random 추출한 라인에 정지 (매 RANGED 가 다른 Y 라인). 정지 후 `RANGED_FIRE_INTERVAL = 1.2f` 간격으로 **Player 방향 단위벡터 aimed 발사** — Bullet 에 처치될 때까지 계속 (RETREATING 단계 / `RANGED_STAY_TIME` 없음).
+- CollisionChecker 에 `ENEMY_BULLET ↔ PLAYER` 검사 추가 (ENEMY 루프와 분리해서 별도 forEach — 책임 분리).
+- `EnemyGenerator` 임시: `Type.RANGED` 만 spawn 으로 검증 후 #5 에서 random 복원.
+
+#### [x] #3 — SPLIT 분열 + SPLIT_MINION 자폭 *(검증 완료, 2026-05-01)*
+
+- **SPLIT 본체 동작 = SUICIDE 와 동일** (`updateSuicide` 공유). 차이는 HP 3 (Bullet 3발) 으로 더 오래 살고, `startDying` 안에서 minion 2마리 분열 추가까지.
+- `Enemy.Type.SPLIT_MINION` 추가 — `R.mipmap.enemy_split_minion`, 70×70, HP 1, speed 350, score 5, hitDamage 1. EnemyGenerator 의 random 풀에서는 제외 (#5 에서 `entries.filter { it != SPLIT_MINION }`).
+- 분열은 `Enemy.startDying(scene)` 안에서 — SPLIT 인 경우 좌·우 30° 두 방향으로 SPLIT_MINION spawn (`MINION_ANGLES = listOf(-30f, 30f)`). startDying 은 dying 상태 진입 + die vfx 그리는 책임도 같이 가짐 (#4 참조).
+- SPLIT_MINION 의 사선 이동은 SUICIDE 의 dive 필드 (`diveVx, diveVy, diving`) 재사용 — init 시점에 angle 받아 즉시 dive 모드.
+- **SPLIT_MINION 공격 = lock-on 자폭** (SUICIDE 와 같은 패턴). 분열 직후 `MINION_LOCK_DELAY = 0.3f` 동안 사선 비행 → 그 시점 Player 위치로 lock-on (`lockDiveTarget` 재사용 — diveVx/Vy 갱신) → 이후 같은 dive 코드로 직진. 시작 위치 / 크기 / 속도 / 숫자 (70×70, 350f/s, 동시 2마리) 가 달라 회피 패턴이 SUICIDE 와 다름.
+- `EnemyGenerator` 임시: `Type.SPLIT` 만 spawn 으로 검증.
+
+#### [x] #4 — VFX 도입 (hit + die, "주체가 자기 draw 에서 직접 그림" 일관 패턴) *(검증 완료, 2026-05-01)*
+
+- 자산 6종 — 처음부터 lowercase + underscore 이름으로 import (Android 리소스 규칙):
+  `vfx_player_hit` / `vfx_enemy_hit` / `vfx_suicide_die` / `vfx_ranged_die` / `vfx_split_burst` / `vfx_minion_die`.
+- **공통 원칙** = framework `laser_spark` (DragonFlight `Player.kt:38, 117~125`) 의 "발사 주체가 자기 draw 안에서 짧은 시간 직접 그리고 사라진다" 를 hit / die 양쪽에 일관 적용. **별도 Effect 클래스 / EFFECT layer / muzzle flash 단계 모두 채택 안 함** (시행착오 끝에 정착, §8.2).
+- **hit vfx** — Bullet/EnemyBullet 에 `hitting` 상태 (`hitting`, `hitTime`, `hitRect`, `sharedHitBitmap` 캐시):
+  - 명중 시 즉시 `world.remove` 하지 않고 `bullet.startHitting()` 호출 → `HIT_DURATION = 0.1f` 동안 본체 sprite 안 그리고 hit vfx 만 자기 위치에 그리다 self-remove.
+  - `collisionRect` getter 의 hitting 분기 → 빈 사각형 반환 → 다른 enemy 와 또 부딪히지 않음.
+  - 사이즈: Bullet 110, EnemyBullet 90.
+  - CollisionChecker 의 명중 분기는 `bullet.startHitting()` 한 줄 (`world.remove` 호출 X).
+- **die vfx** — Enemy 에 `dying` 상태 (`dying`, `dyingTime`, `dieRect`, `sharedDieBitmaps[type]` 캐시):
+  - `enemy.life <= 0` 시 즉시 `world.remove` 하지 않고 `enemy.startDying(scene)` 호출 → dying 진입 + `collisionRect.setEmpty()` + (SPLIT 일 경우) minion 분열까지 한 곳에서.
+  - dying 동안 `update` 는 dyingTime 카운트만 (이동/공격 skip), 0 이하 되면 self-remove.
+  - dying 동안 `draw` 는 본체 sprite / HP gauge 안 그리고 die vfx 만 자기 위치에 `width × DIE_SIZE_MUL = 1.5` 로 그림.
+  - `DIE_DURATION = 0.1f` (hit 와 같은 길이 — 깜빡 보이고 사라지는 정도. 본격 vfx 폴리싱은 7주차).
+  - type 별 die 자산: SUICIDE → vfx_suicide_die, RANGED → vfx_ranged_die, SPLIT → vfx_split_burst (분열 vfx 가 die 대용 — 별도 die PNG 없음), SPLIT_MINION → vfx_minion_die.
+- CollisionChecker 의 모든 enemy/bullet 사망 분기에서 `world.remove(...)` 호출 제거 — layer 제거 책임이 enemy/bullet self-remove 로 이동.
+
+#### [ ] #5 — EnemyGenerator random 복원 + 밸런스
+
+- `EnemyGenerator` 의 임시 single-type 로직 제거 → 다시 `Enemy.Type.entries.random()` (단, SPLIT_MINION 은 spawn 후보에서 제외 — `entries.filter { it != SPLIT_MINION }.random()`).
+- 3종 동시 등장 시 spawn 빈도, HP, Player 데미지 시각적 검증하면서 1차 밸런싱 (수치 조정만, 동작 추가 X).
+- 3주차 종료 빌드/플레이 확인.
 
 ### 4주차 (~5/1, 누적) — 6 commits *(5주차 일부 당김)*
 
@@ -614,7 +694,7 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 
 #### [ ] #3 — 최종 정리
 
-**총 42 commits** — 1주차 6 + 2주차 5 + 3주차 4 + 4주차 6 + 5주차 4 + 6주차 7 + 7주차 7 + 8주차 3. (Scene 작업과 Character 작업 분리 원칙 §2.2#5 적용)
+**총 43 commits** — 1주차 5 + 2주차 7 + 3주차 4 + 4주차 6 + 5주차 4 + 6주차 7 + 7주차 7 + 8주차 3. (plan 재배치 — §8.1: monster/충돌+HUD 1→2주차 이동, BossScene 전환 6→1주차 당김, BossScene 노말맵화 신규, +1) (Scene 작업과 Character 작업 분리 원칙 §2.2#5 적용)
 
 ---
 
@@ -627,10 +707,15 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 | 리소스 수집 (그래픽/사운드) | 1주차 | 7주차 | 1주차 framework 가 그림 없이 만들 만큼 풍부. placeholder 도형으로 동작 먼저 검증한 뒤 7주차에 이펙트·BGM 과 함께 폴리싱 묶기 |
 | Player + 배경 + 자동 발사 | 2주차 | 1주차 | 1주차 framework 커밋이 모두 1주차 cutoff 안에 있음 (`VertScrollBackground` 4/9, Player 직접 터치 처리 4/2). 미루면 1주차 backlog 비어 framework 진도와 어긋남 |
 | 적 3종 + 충돌 + Recycle | 3주차 | 1주차 | 위와 동일. `IRecyclable` 4/4, `IBoxCollidable` 4/3, EnemyGenerator 4/2 모두 4/10 cutoff 안 |
-| 타이틀/Pause/Result 화면 | 7주차 | 3주차 | 3주차 framework 추가 0건. 새 시스템 도입 근거 없음 → 1주차에 깐 SceneStack 위에 화면만 올리는 작업으로 채움 |
+| 타이틀/Pause/Result 화면 | 7주차 → 3주차 (1차 시도) | **7~8주차로 환원** | 3주차 시작 시점 (2026-05-01) 에 사용자가 "framework 진도(원래 3주차에 몬스터 다양화) 따라 Enemy 공격 행동 먼저" 로 결정. Result Scene 은 6주차 #7 (보스 클리어 → Result) 에 자연 흡수, Pause/Title 다듬기는 7주차 폴리싱 단계로 묶음 |
+| Enemy 공격 행동 (자폭/원거리/분열) | 5주차 | **3주차** | 3주차 framework 신규 0건이지만 1·2주차 도구 (`when type` 분기, ObjectPool, CollisionChecker, Layer 추가) 만으로 구현 가능. DragonFlight 도 4/9 시점에 Enemy 종 분기 패턴 도입. framework 진도와 plan 진도 모두 자연스러움 |
+| VFX (muzzle flash + die effect) 도입 | 7주차 | **3주차 #4** | 사용자가 vfx 에셋(6종) 을 미리 만들어 와서 적용 요청. framework 의 laser_spark 패턴 (Player.kt 가 자기 draw 에서 발사 직후 SPARK_DURATION 0.1초만 직접 그림) 을 muzzle flash 뿐 아니라 die effect 에도 동일 적용 — Enemy 가 죽어도 즉시 layer 에서 빠지지 않고 dying 상태로 DIE_DURATION (0.4초) 동안 살아남아 자기 draw 에서 die vfx 만 그리다 self-remove. 별도 Effect 클래스/EFFECT layer 없이 framework 원칙 "주체가 자기 draw 에서 직접 그림" 일관 유지 |
 | 능력치 증가 (데미지/공속/치명) | 5주차 | 4주차 | 단순 변수 곱셈. 4주차 Registry 패턴으로 보상 카드 종류만 추가하면 같은 framework 사용 |
 | 보스 진입 타이머 UI 자리 | 5주차 | 4주차(자리), 5주차(동작), 6주차(실제 진입) | UI 자리는 4주차 HUD 작업과 같이, 진입 선택 동작은 5주차, 보스 자체는 6주차 |
-| 보스 Scene 진입 흐름 (placeholder Scene 으로 전환) | 6주차 #2 | 2주차 #5 | 사용자가 보스 타일맵 에셋 받아오는 동안 화면 전환 흐름만 미리 만들어 두고 싶다는 결정. `Scene.change` 호출 패턴 자체는 1주차 framework 로 가능 (새 도구 도입 X). 보스 본체(타일맵/패턴/HP) 는 6주차에 그대로 남음 — 그때 `BossScene` placeholder 만 채우면 됨 |
+| 보스 Scene 진입 흐름 (placeholder Scene 으로 전환) | 6주차 #2 | **1주차 #5** | 사용자가 보스 타일맵 에셋 받아오는 동안 화면 전환 흐름만 미리 만들어 두고 싶다는 결정. `Scene.change` 호출 패턴 자체는 1주차 framework 로 가능 (새 도구 도입 X). 보스 본체(타일맵/패턴/HP) 는 6주차에 그대로 남음 — 그때 `BossScene` placeholder 만 채우면 됨 |
+| Enemy 3종 + EnemyGenerator + Bullet↔Enemy 충돌 + Enemy HP gauge | 1주차 #5 | **2주차 #5** | commit `bd9c1a7 몬스터 제작` (Apr 11) 이 framework 1주차 cutoff (4/10) 이후의 시점이라 framework 진도 측면에서 2주차 작업으로 분류하는 게 더 정확 |
+| Player↔Enemy 충돌 + 점수 가산 + HP HUD | 1주차 #6 | **2주차 #6** | commit `15ce5ab 플레이어 체력, 충돌시 데미지` (Apr 11) — 위와 동일 사유 |
+| BossScene = 노말맵 동일 + 배경만 다르게 (개념적 통합) | (원래 plan 에 없던 작업) | **2주차 #7** | 사용자가 보스 맵에서도 같은 게임 로직을 진행하고 싶다는 결정. MainScene 을 open + 파라미터화 하는 것으로 commit 1개 분량 |
 
 ### 8.2 DragonFlight 4/10 패턴과 의도적으로 다른 부분
 
@@ -649,12 +734,19 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 | collisionRect inset | dstRect 기준 11f 절대값 inset (Enemy 만) | **모든 IBoxCollidable (Player/Bullet/Enemy) 에 width·height × 0.8 비율 inset** — 양쪽 10% 씩 안쪽으로 | 처음에는 placeholder 단순 도형이라 inset 없이 시작 → 진짜 캐릭터 PNG 도입(2주차 #4) 후 투명 여백/시각 외곽이 충돌에 잡혀 "스쳤는데 부딪힘" 느낌 발생 → 모든 객체 일률 0.8 비율로 적용 (절대값 11f 보다 비율이 더 robust — 사이즈 변경 시 자동 추종) |
 | 충돌 시점 분리 | 4/9 시점에 Bullet↔Enemy + Player↔Enemy 동시 도입 | #5 (Bullet↔Enemy + Enemy gauge) 와 #6 (Player↔Enemy + HUD) 로 분리 | §2.2#5 분리 정책. "Enemy 자체의 self-contained 동작 (소환/체력/처치)" 과 "플레이어 피격/HUD" 를 다른 commit 으로 |
 | 두 번째 parallax 레이어 (2주차 #1) | 구름 (`clouds.png`) | 별 (`sky_star.png`) — `STARS` layer | Sky Blaster 의 우주/밤하늘 컨셉. 별이 빠르게 흐르면 우주선이 별빛 사이를 통과하는 느낌이 살아남. framework 학습 목표(두 번째 `VertScrollBackground` 인스턴스)는 그대로 충족 |
+| 모든 객체 사이즈 일괄 1.4배 (3주차 #4) | DragonFlight 기준 (Player 160, Enemy 작음) | Player 200, Enemy 130/155/120/70, Bullet 56×112, EnemyBullet 56×84 | 진짜 캐릭터/적 PNG 도입 후 시각 밀도 높아져 placeholder 사이즈로는 묻혀 보임. 사용자 가시성 요구 → 모두 같은 비율로 키워 상대 크기 / 회피 난이도 / 충돌 박스 (inset 0.8) 보존 |
+| Player HP 다단계 (2주차 #6) | 1격사 (HP 없음) | `MAX_LIFE = 10` + `enemy.hitDamage` 별 차감 (SUICIDE 2, 나머지 1) | Sky Blaster 사양상 자폭병/원거리 탄/분열 minion 등 다양한 위협을 한 게임에서 부딪히게 하려면 다단계 HP 가 필수. 5 → 10 으로 올려 RANGED EnemyBullet 한 방의 비중을 10% 로 약화 |
+| RANGED 정지 위치 Y 랜덤화 (3주차 #2) | (해당 없음 — DragonFlight 에 RANGED 패턴 없음) | spawn 시점 `[0.22, 0.35]` 범위 random 추출 | 매 RANGED 가 같은 Y 라인에 정지하면 화면 위쪽이 한 줄로 뭉쳐 시각적/회피 단조로움. 인스턴스별 random 으로 위·아래 흩어짐 |
+| RANGED 의 EnemyBullet aimed 발사 (3주차 #2) | (해당 없음) | 발사 시점 Player 위치 단위벡터 × `EnemyBullet.SPEED` | Player 의 위치 회피가 의미 있는 패턴이 되도록 — 직하 발사면 수직 이동만 회피, aimed 면 좌우 이동도 회피로 카운트 |
+| die effect 패턴 (3주차 #4) | 적이 죽으면 즉시 사라짐 (die effect 없음) | Enemy 에 `dying` 상태 — life≤0 시 즉시 `world.remove` 안 하고 DIE_DURATION 동안 살아남아 자기 draw 에서 die vfx 만 그리다 self-remove | 사용자가 die vfx 자산을 만들어 적용 요청. **별도 Effect 클래스 / EFFECT layer 시도 (option A)** 했다가 폐기 → laser_spark "주체가 자기 draw" 원칙을 die 에도 확장 (option B) 가 framework 와 일관. CollisionChecker 의 `world.remove(enemy)` 모두 제거, 자기 정리 책임이 dying enemy 본인 |
+| hit vfx 패턴 (3주차 #4) | (해당 없음 — laser_spark 는 muzzle flash 였음) | Bullet/EnemyBullet 에 `hitting` 상태 — 명중 시 즉시 `world.remove` 안 하고 HIT_DURATION 동안 살아남아 hit vfx 만 자기 draw | 사용자 결정으로 muzzle flash 자산을 hit vfx 로 재배치 (option A) — 사격 게임 피드백은 명중 지점이 더 중요. dying enemy 와 정확히 같은 패턴이라 일관성 ↑ |
+| BossScene placeholder 동작 (1주차 #5 + 3주차 #4) | (해당 없음 — DragonFlight 에 보스 X) | `MainScene.isBossStage: Boolean` (val). BossScene 진입 시 `if (!isBossStage) add(enemyGenerator)` 로 일반 적 spawn 정지 + BossTimerHud 가 mm:ss 대신 "BOSS STAGE" 텍스트 (LabelUtil 패턴 — HUD 가 매 draw 시점 scene 상태 보고 텍스트 결정) | 6주차 보스 본체는 미정 — 일단 placeholder Scene 전환만 완료. 보스 스테이지의 시각적 신호(라벨)와 행동 분기(spawn 정지) 만 도입 |
 
 ---
 
 ## 9. 현재 진척
 
-> **마지막 갱신**: 2026-05-01 (2주차 #5 완료 — MainScene → BossScene placeholder 전환. 사용자 보스 타일맵 수집 중이라 6주차 #2 의 진입 흐름만 먼저 당겨옴. BOSS_ENTER_TIME 은 테스트용 10f. 2주차 전체(#1~#5) 종료. 다음은 3주차 #1 — Title Scene 다듬기)
+> **마지막 갱신**: 2026-05-01 (3주차 #1~#4 모두 디바이스 검증 완료. SUICIDE / RANGED (aimed + Y random) / SPLIT (= SUICIDE 본체 동작 + 분열) / VFX (hit + die 모두 dying/hitting 상태) 모두 정착값 확정. plan §7 sub-task 메모 / §8.2 의도적 차이표 / §10 디폴트값 모두 정착값 기준으로 정리 — **다음 세션이 §7 따라 구현하면 시행착오 단계 없이 한 번에 도달**. 다음은 #5 EnemyGenerator random 복원. 코드 working tree 모두 unstaged, commit 미실시.)
 
 ### 9.1 완료 / 진행 / 다음
 
@@ -664,15 +756,21 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 | ✅ 완료 | 1주차 #2 — VertScrollBackground 종스크롤 배경 | placeholder `sky_bg.png` (900×1600) |
 | ✅ 완료 | 1주차 #3 — Player 클래스 + 터치 드래그 이동 | placeholder `player_placeholder.png`, X+Y 드래그 follow |
 | ✅ 완료 | 1주차 #4 — Player 자동 발사 + Bullet (Recyclable + ObjectPool) | placeholder `bullet_placeholder.png`, `Bullet.get()` 풀 패턴, `FIRE_INTERVAL = 0.3f` |
-| ✅ 완료 | 1주차 #5 — Enemy 3종 + EnemyGenerator + Bullet↔Enemy 충돌 + Enemy HP Gauge | placeholder PNG 3장, `Enemy.Type` enum, 1초 간격 spawn, `Bullet`/`Enemy` 가 `IBoxCollidable`, `CollisionChecker` 가 BULLET↔ENEMY 이중 reverse 순회, Enemy 머리 위 HP gauge (정적 공유) |
-| ✅ 완료 | 1주차 #6 — Player↔Enemy 충돌 + HUD (Player HP Gauge + Score) | `Player` IBoxCollidable + `life=5`/`decreaseLife`/`dead`, `Enemy.Type` 에 `score` 컬럼(10/20/30), `MainScene.score`+`addScore`, `ScoreLabel`(LabelUtil) + `PlayerHpHud`(Gauge 빨강) UI layer, `CollisionChecker` 에 PLAYER↔ENEMY 추가 + dead 시 Activity.finish |
-| ✅ 완료 | 2주차 #1 — 별 parallax 레이어 (구름 대신 별, §8.2) | `sky_bg.png` 별 빼고 단색 (`#0B1B3A`) + `sky_star.png` 신규, `STARS` layer (ENEMY 뒤·CONTROLLER 앞), `STARS_SPEED = 120f` |
+| ✅ 완료 | 1주차 #5 — 시간 경과 시 보스 placeholder Scene 전환 (6주차 #2 에서 당겨옴) | `BossScene` placeholder (MainScene 한 줄 wrapper), `MainScene.elapsedSec` + 임계 도달 시 `Scene.change()`, `BOSS_ENTER_TIME = 10f` 테스트값. **`MainScene.isBossStage: Boolean` 을 val 로 노출 — BossScene 진입 시 (1) `if (!isBossStage) add(enemyGenerator, ...)` 로 일반 적 spawn 정지, (2) BossTimerHud 가 mm:ss 대신 "BOSS STAGE" 라벨 표시 (3주차 #4 후반에서 보강한 결정 — 다음 세션에서는 처음부터 함께 도입)** |
+| ✅ 완료 | 2주차 #1 — 별 parallax 레이어 (구름 대신 별, §8.2) | `sky_bg.png` 별 빼고 단색 + `sky_star.png` 신규, `STARS` layer (ENEMY 뒤·CONTROLLER 앞), `STARS_SPEED = 100f` |
 | ✅ 완료 | 2주차 #2 — a2dg framework 갱신 (Scene.clipRect + GameMetrics.borderRect + GameView clip) | 2_Project 4/13 `3300abc`+`10492d7` 의 변경분 그대로 가져옴, MainScene `clipsRect = true` |
-| ✅ 완료 | 2주차 #3 — sky_star.png seamless 재생성 (clouds 패턴 적용) | clouds.png 의 50% buffer/fade 비율을 별 비트맵에 옮김. 이후 사용자가 진짜 별 에셋으로 교체 |
-| ✅ 완료 | 2주차 #4 — AndroidManifest 정리 + HUD 자리 잡기 | `appCategory="game"` + `screenOrientation="nosensor"`, `PlayerHpHud` 좌하단·초록 + HP 라벨, `BossTimerHud` 신규, code reference `sky_stars` → `sky_star` |
-| ✅ 완료 | 2주차 #5 — MainScene → BossScene 전환 흐름 (placeholder, 6주차에서 당겨옴) | `BossScene` placeholder 신규, `MainScene.elapsedSec` + 10초 임시값 도달 시 `Scene.change()`, `BossTimerHud` 가 Scene 의 elapsedSec 읽기로 통일 |
-| ▶ **다음** | **3주차 #1 — Title Scene 다듬기** | 3주차 framework 신규 도입 0건이라 7주차 화면 작업 당겨옴. §7 3주차 #1 참조 |
-| ⏸ 대기 | 3주차 #2~#4, 그리고 4~8주차 전부 | |
+| ✅ 완료 | 2주차 #3 — 캐릭터/별/배경 에셋 교체 (구 sky_star seamless) | sky_star/sky_bg/title_bg/boss_bg + Player/Bullet/Enemy/Enemy_split_minion/enemy_bullet PNG 들. clouds 패턴(seamless) 은 placeholder 단계에서 검토했고 사용자가 진짜 에셋 가져오면서 교체로 마무리 |
+| ✅ 완료 | 2주차 #4 — AndroidManifest 정리 + HUD 자리 잡기 | `appCategory="game"` + `screenOrientation="nosensor"`, `PlayerHpHud` 좌하단·초록 + HP 라벨, `BossTimerHud` 신규 (Scene.elapsedSec 읽기), code reference `sky_stars` → `sky_star` |
+| ✅ 완료 | 2주차 #5 — Enemy 3종 + EnemyGenerator + Bullet↔Enemy 충돌 + Enemy HP gauge (1주차 #5 였음, §8.1) | **정착값 (130/155/120 사이즈, 280/150/220 속도, 1/2/3 HP, 10/20/30 점수, 2/1/1 hitDamage) 처음부터**. Type enum + 정적 공유 Gauge, CollisionChecker 가 BULLET↔ENEMY |
+| ✅ 완료 | 2주차 #6 — Player↔Enemy 충돌 + 점수 가산 (1주차 #6 였음, §8.1) | Player IBoxCollidable + **MAX_LIFE = 10 처음부터** (5 → 10 시행착오 생략, §8.2). ScoreLabel 의 displayScore lerp 처음부터, PlayerHpHud 좌하단/초록 처음부터, CollisionChecker 에 PLAYER↔ENEMY + Activity.finish |
+| ✅ 완료 | 2주차 #7 — BossScene = 노말맵 + 배경만 다르게 + 시작화면 박스 제거 + collisionRect inset 0.8 | MainScene 을 open + 두 파라미터, BossScene 한 줄 wrapper, activity_main.xml 박스 제거, Player/Bullet/Enemy 모두 inset 0.8. (3주차 #4 후반 보강) BossScene 진입 시 EnemyGenerator 가 world 에 안 추가되어 일반 적 spawn 정지 + BossTimerHud 가 mm:ss 대신 "BOSS STAGE" 텍스트 표시 — `MainScene.isBossStage: Boolean` 을 val 로 노출, BossTimerHud 가 매 draw 마다 분기. framework `LabelUtil` 패턴 (HUD 가 매 draw 시점 scene 상태 보고 텍스트 결정) 그대로 |
+| ✅ 디바이스 검증 OK | **3주차 #1 SUICIDE 자폭** | 자폭 lock-on + die vfx + Bullet hit vfx + 사이즈/HP buff 까지 통합 검증 |
+| ✅ 디바이스 검증 OK | **3주차 #2 RANGED + EnemyBullet** | aimed 발사 + Y 랜덤화 + hit vfx 까지 모두 검증 |
+| ✅ 디바이스 검증 OK | **3주차 #3 SPLIT 분열 + SPLIT_MINION 자폭** | SPLIT 본체 = SUICIDE 와 같은 lock-on 자폭 (코드 공유) + 죽을 때 minion 분열, minion 도 lock-on 자폭 |
+| ✅ 디바이스 검증 OK | **3주차 #4 VFX (hit + die)** | dying / hitting 상태 패턴 일관 적용. 별도 Effect 클래스 / EFFECT layer / muzzle flash 단계 모두 없음 |
+| ✅ 보강 완료 | **(1주차 #5) BossScene 진입 시 spawn 정지 + "BOSS STAGE" 라벨** | `isBossStage` val + 조건부 add + BossTimerHud 텍스트 분기 |
+| ▶ **다음** | **3주차 #5 EnemyGenerator random 복원 + 밸런스** | `entries.filter { it != SPLIT_MINION }.random()`, 3종 동시 등장 시 spawn 빈도/HP/데미지 1차 밸런싱 |
+| ⏸ 대기 | 4~8주차 전부 | |
 
 ### 9.2 빌드 / 동작 확인 상태
 
@@ -715,16 +813,16 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 
 ### 10.2 Player
 
-- 크기: **140×140** (placeholder 80→100→140 단계로 키움. 진짜 캐릭터 PNG 로 교체 후 모바일 종스크롤 슈팅 표준 비율(화면 폭의 ~15%)에 맞춰 140 으로 정착, `Player.PLAYER_WIDTH/HEIGHT`)
+- 크기: **200×200** (placeholder 80→100→140→**200** 단계로 키움. 마지막 200 은 3주차 #4 — 사용자가 모든 게임 객체 가시성 일괄 1.4배 결정. 화면 폭 900 의 22% 로 모바일 슈팅 기준 큰 편이지만 가시성 우선. `Player.PLAYER_WIDTH/HEIGHT`)
 - 시작 위치: `(metrics.width / 2, metrics.height - PLAYER_HEIGHT * 1.5f)` = `(450, 1390)` (화면 하단 중앙)
-- 시작 HP: 5 (Enemy 1마리 부딪히면 1 감소) — 5번 sub-task 에서 도입
+- 시작 HP: **10** (5 → 10 으로 3주차 #4 시점에 buff. EnemyBullet/접촉 데미지의 비중을 절반으로 약화)
 - 이동: framework lerp 패턴 (`targetX/Y`, `SPEED = 1100f` per second. 1500→1100 으로 줄임 — 캐릭터가 커진 만큼 회피 난이도 보정). 화면 경계 안에서 clamp.
 - 발사 간격: 0.3초 (FIRE_INTERVAL) — 3번 sub-task 에서 도입
 - Bullet 데미지: 1 (4주차 능력치 곱셈 적용)
 
 ### 10.3 Bullet
 
-- 크기: **24×48** (`Bullet.BULLET_WIDTH/HEIGHT`, 가시성 위해 §2.5 의 12×24 에서 키움)
+- 크기: **56×112** (`Bullet.BULLET_WIDTH/HEIGHT`, 12×24 → 24×48 → 40×80 → **56×112** 로 세 번 키움. 마지막은 3주차 #4 — 사용자가 Player/Enemy/Bullet/EnemyBullet 모두 일괄 1.4배)
 - 속도: 1500f/s (위 방향, `Bullet.SPEED`)
 - 발사 위치: Player 머리 위 (`y - PLAYER_HEIGHT/2 - BULLET_OFFSET`, `BULLET_OFFSET = 8f`)
 - 발사 간격: 0.3초 (`Player.FIRE_INTERVAL`)
@@ -733,24 +831,33 @@ framework 추가 0건이므로 새 시스템 도입 X. 1주차에 깐 SceneStack
 
 ### 10.4 Enemy 종류별
 
-| 종류 | placeholder | width×height | HP | 속도 (아래 방향) | 점수 (#6 에서 부여) |
-|---|---|---|---|---|---|
-| `Type.SUICIDE` | 빨간 원 (`#EF4444`, 진짜 에셋 교체됨) | 95×95 | 1 | 280f/s | 10 |
-| `Type.RANGED` | 주황 삼각 (`#F97316`, 진짜 에셋 교체됨) | 110×110 | 2 | 150f/s | 20 |
-| `Type.SPLIT` | 보라 사각 (`#A855F7`, 진짜 에셋 교체됨) | 85×85 | 3 | 220f/s | 30 |
+| 종류 | placeholder | width×height | HP | 속도 (아래 방향) | 점수 | hitDamage (Player 충돌 시) |
+|---|---|---|---|---|---|---|
+| `Type.SUICIDE` | 빨간 원 (`#EF4444`, 진짜 에셋 교체됨) | 130×130 | 1 | 280f/s | 10 | **2** (자폭, 3주차 #1) |
+| `Type.RANGED` | 주황 삼각 (`#F97316`, 진짜 에셋 교체됨) | 155×155 | 2 | 150f/s | 20 | 1 |
+| `Type.SPLIT` | 보라 사각 (`#A855F7`, 진짜 에셋 교체됨) | 120×120 | 3 | 220f/s | 30 | 1 |
+| `Type.SPLIT_MINION` | SPLIT 본체 축소판 (진짜 에셋) | 70×70 | 1 | 350f/s | 5 | 1 |
+
+> 사이즈 history: 70 → 95/110/85/50 (진짜 PNG 도입 시점, 2주차 #4) → **130/155/120/70** (3주차 #4 일괄 1.4배). SPLIT_MINION 은 SPLIT 본체가 죽었을 때 좌·우 30° 사선으로 2마리만 분열 spawn (`Enemy.MINION_ANGLES = [-30°, +30°]`). 분열 후 `MINION_LOCK_DELAY = 0.3f` 동안 사선 비행을 유지하고 그 시점 Player 위치로 lock-on → SUICIDE 와 같은 dive 직진 (자폭). EnemyGenerator 의 일반 random 풀에는 포함하지 않으며, 3주차 #5 random 복원 단계에서 `entries.filter { it != SPLIT_MINION }.random()` 로 명시적 제외.
+
+EnemyBullet (RANGED 가 발사): `width=56, height=84, speed=700f/s, damage=1`. 24×36 → 40×60 → **56×84** 로 두 번 키움 (가시성, 마지막은 일괄 1.4배). RANGED 는 발사 시점 Player 위치로 단위벡터 정규화한 (vx, vy) 로 **aimed 발사** — Player 가 좌우로 빠르게 움직이면 매 1.2초마다 다른 방향. Player Bullet 의 ObjectPool 패턴 그대로, layer=`ENEMY_BULLET`. aimed 탄이 좌·우·위로도 빠질 수 있어 화면 밖 검사는 사방.
 
 > 크기·속도는 한 번 일괄 조정됨 — 진짜 캐릭터 에셋으로 교체된 시점(2주차 #4 직후)에 시각적 박력을 위해 30~40% 키우고 같은 비율로 속도 25~30% 감소시켜 회피 난이도 유지.
 > 충돌 박스(`collisionRect`) 는 모든 IBoxCollidable 에 width·height × 0.8 inset 적용 (양쪽 10% 씩 안쪽). 캐릭터 PNG 의 투명 여백 보정. (§8.2)
 
-EnemyGenerator: spawn 간격 `GEN_INTERVAL = 1.0f` (단순 1마리/1초). 8주차 밸런스 단계에서 wave 시스템 검토.
+EnemyGenerator: spawn 간격 `GEN_INTERVAL = 1.0f` (단순 1마리/1초). 3주차 #1~#3 동안에는 한 종류만 spawn 하도록 임시 수정해서 검증, #4 에서 random 복원. 8주차 밸런스 단계에서 wave 시스템 검토.
+
+RANGED 행동 파라미터: `RANGED_STOP_RATIO_MIN/MAX = 0.22f / 0.35f` (spawn 시점에 그 사이 random 추출, 매 인스턴스가 다른 Y 라인에 정지), `RANGED_FIRE_INTERVAL = 1.2f`. 정지 후엔 Bullet 으로 처치될 때까지 계속 발사 (재하강 X). SUICIDE/SPLIT: `SUICIDE_LOCK_RATIO = 0.4f`, `SUICIDE_DIVE_MUL = 1.6f` (최종 dive 속도 = type.speed × 1.6 → SUICIDE 448f/s, SPLIT 352f/s). SPLIT 은 본체 동작이 SUICIDE 와 동일하고 죽을 때만 분열 추가.
+
+VFX 파라미터: `Bullet.HIT_DURATION = EnemyBullet.HIT_DURATION = Enemy.DIE_DURATION = 0.1f` 일관 — 모든 vfx 가 깜빡 보이고 사라지는 정도. muzzle flash 는 사용자 결정 (3주차 #4 후반) 으로 폐기 → 같은 자산을 hit vfx 로 재배치 (사격 게임 피드백은 명중 지점이 더 중요). 본격 vfx 폴리싱 (alpha/scale 변화) 은 7주차.
 
 ### 10.5 Layer enum (incremental — 그 시점 클래스가 있는 것만)
 
 > framework 가 가르치는 원칙: **Layer enum 항목은 그 클래스를 도입하는 commit 에서 같이 추가** — 미래 layer 를 미리 박아두지 않는다 (§11#12 참조).
 
-현재 (1주차 #6 완료 시점):
+현재 (3주차 #4 VFX 도입 시점 — die effect 가 dying enemy 자기 draw 라 별도 layer 없음):
 ```kotlin
-enum class Layer { BACKGROUND, PLAYER, BULLET, ENEMY, CONTROLLER, UI }
+enum class Layer { BACKGROUND, PLAYER, BULLET, ENEMY, ENEMY_BULLET, STARS, CONTROLLER, UI }
 ```
 
 언제 무엇이 추가되는지:
@@ -759,9 +866,11 @@ enum class Layer { BACKGROUND, PLAYER, BULLET, ENEMY, CONTROLLER, UI }
 | 1주차 #2 | `BACKGROUND` | `VertScrollBackground` 도입 |
 | 1주차 #3 | `PLAYER` | `Player` 클래스 도입 |
 | 1주차 #4 | `BULLET` | `Bullet` 클래스 도입 |
-| 1주차 #5 | `ENEMY`, `CONTROLLER` | `Enemy`, `EnemyGenerator`, `CollisionChecker` 도입 |
-| 1주차 #6 | `UI` | `ScoreLabel`/`PlayerHpHud` HUD 객체 도입 |
+| 1주차 #5 | (Layer 추가 없음) | BossScene placeholder 전환 — Scene/SceneStack 만 사용 |
 | 2주차 #1 | `STARS` | 별 parallax `VertScrollBackground` 도입 (ENEMY 뒤·CONTROLLER 앞 — 캐릭터 위로 별빛이 흐름. DragonFlight 4/13 의 `CLOUD` 자리, §8.2) |
+| 2주차 #5 | `ENEMY`, `CONTROLLER` | `Enemy`, `EnemyGenerator`, `CollisionChecker` 도입 (재배치 후 — §8.1) |
+| 2주차 #6 | `UI` | `ScoreLabel`/`PlayerHpHud`/`BossTimerHud` HUD 객체 도입 (재배치 후 — §8.1) |
+| 3주차 #2 | `ENEMY_BULLET` | `EnemyBullet` 클래스 도입. ENEMY 위·STARS 아래 — 적이 자기 탄을 가리지 않도록 ENEMY 위에 두되, 별 parallax 보다는 아래 |
 
 DragonFlight 4/9 의 최종 enum 순서 `BACKGROUND, PLAYER, BULLET, ENEMY, CONTROLLER, UI` 를 누적적으로 도달하는 흐름과 일치.
 
@@ -783,7 +892,25 @@ DragonFlight 4/9 의 최종 enum 순서 `BACKGROUND, PLAYER, BULLET, ENEMY, CONT
 12. **Layer enum 을 미리 다 채워두기** — framework 패턴은 **클래스 도입 commit 에서 layer 도 같이 추가**하는 incremental. 미래 layer 를 미리 적어두면 debug 의 `[1,1,3,0,0,0]` 처럼 빈 자리가 보이고, 클래스 없이 layer 만 있는 어색한 중간 상태가 됨 (§10.5 표 참조). #1 에서 6개 enum 한꺼번에 만든 실수를 #4 직후 incremental 로 정정함.
 13. **placeholder 배경 비트맵이 tileable 하지 않음** — `VertScrollBackground` 는 비트맵을 세로로 반복 타일링하므로 **비트맵 자체가 위/아래 edge 가 이어져야** 이음새가 안 보임. DragonFlight 의 `df_bg.png` (384×512) 는 손으로 그려 자연스럽게 이어지게 디자인. PowerShell 로 random-stars 를 뿌릴 때는 **상하 edge 부근(예: y < 60, y > tileHeight-60) 에는 별을 찍지 않음** → 이음새 영역이 순수 배경색이라 seamless. 처음 #2 에서 0~1600 전구간에 별을 찍어 이음새가 보였던 문제를 #4 직후 60px buffer 로 정정함.
 14. **`Gauge.thickness` 를 픽셀 단위로 줌** — `Gauge.draw(canvas, x, y, scale, progress)` 는 내부에서 `canvas.scale(scale, scale)` 후 1.0 단위 좌표계에 선을 그린다. 따라서 **`thickness` 도 1.0 단위**다. 실제 화면 두께 ≈ `thickness × scale`. 14f 같은 픽셀값을 넘기면 (예: scale=540 일 때) 7560 픽셀 두께 선이 그려져 **화면 전체가 단색으로 덮임**. DragonFlight 의 `enemy_gauge` / `player_gauge` 가 모두 0.1f 인 것이 단서. PlayerHpHud 첫 구현에서 14f 로 줬다가 화면 전체가 빨강으로 변해 1주차 #6 직후 0.025f 로 정정.
-15. **`VertScrollBackground` 비트맵의 위/아래 buffer 부족으로 tile 이음새가 보임** — `VertScrollBackground` 가 비트맵을 단순 반복 타일링하므로 **위/아래 edge 부근에 시각 요소가 있으면 두 tile 의 경계가 "줄"처럼 보인다**. 2_Project (2주차 스냅샷) 의 `clouds.png` (900×600) 를 분석해 보면 **상단 80px 완전 투명, 80~200px fade in (알파 12→95), 200~500px full, 500~600px fade out** — 즉 **전체 50% 가 buffer/fade 영역**이다. seamless 효과의 정체는 `VertScrollBackground` 코드가 아니라 비트맵 디자인. Sky Blaster 의 `sky_star.png` 도 같은 패턴(위/아래 150px 투명 + 150~300 / 900~1050 fade + 300~900 full) 으로 재생성하여 2주차 #2 완료. 처음에는 buffer 100px + hard cutoff 였는데 사용자가 시각적으로 끊기는 느낌을 지적해 정정.
+15. **`VertScrollBackground` 비트맵의 위/아래 buffer 부족으로 tile 이음새가 보임** — `VertScrollBackground` 가 비트맵을 단순 반복 타일링하므로 **위/아래 edge 부근에 시각 요소가 있으면 두 tile 의 경계가 "줄"처럼 보인다**. 2_Project (2주차 스냅샷) 의 `clouds.png` (900×600) 를 분석해 보면 **상단 80px 완전 투명, 80~200px fade in (알파 12→95), 200~500px full, 500~600px fade out** — 즉 **전체 50% 가 buffer/fade 영역**이다. seamless 효과의 정체는 `VertScrollBackground` 코드가 아니라 비트맵 디자인. Sky Blaster 의 별 비트맵도 같은 패턴(위/아래 150px 투명 + 150~300 / 900~1050 fade + 300~900 full) 으로 재생성. 이후 사용자가 직접 만든 별 에셋(투명 배경 처리됨) 으로 교체.
+16. **다음 세션이 plan 을 처음부터 따라갈 때, 옛 값을 사용하지 말 것** — 진행 중에 사용자 결정으로 일괄 조정된 정착값들이 있다. **§10 정착값 + sub-task "만들 것" 의 정착값 메모 + §8.2 의도적 차이표 를 그대로 사용**한다.
+    - **Player**: PLAYER_WIDTH/HEIGHT = **200**, SPEED = **1100f**, MAX_LIFE = **10** (1주차 #3 + 2주차 #6 부터 처음부터). 옛 100/140/5 사용 X.
+    - **Bullet**: BULLET_WIDTH/HEIGHT = **56×112**, SPEED = 1500f. 옛 12×24 / 24×48 / 40×80 사용 X.
+    - **EnemyBullet**: ENEMY_BULLET_WIDTH/HEIGHT = **56×84**, SPEED = 700f, **vx/vy 인자 처음부터** (RANGED 가 aimed 발사). 화면 밖 검사는 사방. 옛 24×36 / 40×60 + 직하 전용 사용 X.
+    - **Enemy.Type**: **SUICIDE 130×130/280f, RANGED 155×155/150f, SPLIT 120×120/220f, SPLIT_MINION 70×70/350f**. hitDamage **2/1/1/1**. 옛 95/110/85/50 사용 X.
+    - **Enemy 동작**: **SUICIDE/SPLIT 둘 다 `updateSuicide` 공유** (lock-on 자폭). RANGED 는 `[0.22, 0.35]` Y random 정지 + Player 방향 aimed 발사 (RETREATING/STAY 단계 없음, 죽을 때까지 발사). SPLIT_MINION 은 init 시 dive 모드 + 0.3초 후 lock-on 자폭. SPLIT 은 startDying 시 minion 2마리 분열 (좌·우 30°).
+    - **collisionRect inset**: 모든 IBoxCollidable 에 **width × 0.8 비율 inset**. 2주차 #5/#6 부터 처음부터.
+    - **VFX 패턴 (3주차 #4 부터)**: hit / die 모두 "주체가 자기 draw" — 별도 Effect 클래스 / EFFECT layer / muzzle flash 단계 시도 X. **Bullet/EnemyBullet 에 hitting 상태**, **Enemy 에 dying 상태**, 모두 명중/사망 시 즉시 `world.remove` 안 하고 `startHitting()` / `startDying(scene)` 호출 → `HIT_DURATION = DIE_DURATION = 0.1f` 동안 자기 draw 에서 vfx 만 그리다 self-remove. `collisionRect.setEmpty()` 로 추가 충돌 자동 skip. CollisionChecker 의 모든 `world.remove(...)` 제거.
+    - **VFX 자산 6종**: `vfx_player_hit` (Bullet 명중), `vfx_enemy_hit` (EnemyBullet 명중), `vfx_suicide_die` / `vfx_ranged_die` / `vfx_split_burst` (SPLIT die 대용) / `vfx_minion_die` (Enemy 사망). 사용자가 mipmap 에 lowercase + underscore 이름으로 import.
+    - **PlayerHpHud**: 시안(02_normal_stage.png) 에 맞춰 **좌하단 + 초록색** 처음부터. `Gauge.thickness` 는 1.0 단위 (예: 0.04f) — 픽셀 단위 X (§11#14).
+    - **ScoreLabel**: `displayScore` 분리 + lerp 패턴 처음부터.
+    - **BOSS_ENTER_TIME**: 1주차 #5 테스트값 `10f` (실 사양 60f 는 6주차 #2 에서 되돌림).
+    - **MainScene 은 open class** + 세 생성자 파라미터 (`backgroundResId`, **`val isBossStage`**) 처음부터. **BossScene 진입 시 `if (!isBossStage) add(enemyGenerator, ...)` 로 spawn 정지** + **BossTimerHud 가 isBossStage 시 "BOSS STAGE" 라벨** (mm:ss 대신). BossScene = 한 줄 wrapper.
+    - **에셋 매핑** (mipmap-xxxhdpi): `sky_bg`, `boss_bg`, `title_bg`, `sky_star`, `player_placeholder`, `bullet_placeholder`, `enemy_suicide`, `enemy_ranged`, `enemy_split`, `enemy_split_minion`, `enemy_bullet`, `vfx_player_hit`, `vfx_enemy_hit`, `vfx_suicide_die`, `vfx_ranged_die`, `vfx_split_burst`, `vfx_minion_die`.
+
+17. **die / hit vfx 시 "별도 GameObject 만들기" 함정** — Effect 클래스 / EFFECT layer 를 만들어 spawn 하는 방식은 시행착오 끝에 폐기됨. framework laser_spark 의 "주체가 자기 draw" 원칙을 **dying enemy 와 hitting bullet 까지 일관 확장**하는 게 정답. 즉 죽거나 명중한 객체를 즉시 layer 에서 빼지 않고 짧은 시간 살려두며 자기가 vfx 그리다 self-remove. 자세한 패턴은 §11#16, sub-task 3주차 #4 참조.
+
+18. **BossScene 에 EnemyGenerator 무지성으로 추가하기** — MainScene 의 `init { world.apply { add(...) } }` 블록을 그대로 가져가면 보스 스테이지에서도 일반 적이 spawn 된다. **`if (!isBossStage) add(enemyGenerator, Layer.CONTROLLER)` 로 분기 필수** (1주차 #5). 같은 이유로 BossTimerHud 도 `scene.isBossStage` 보고 텍스트 결정 (LabelUtil 패턴 — HUD 가 매 draw 시점 scene 상태 보고 그릴 문자열 결정).
 
 ---
 

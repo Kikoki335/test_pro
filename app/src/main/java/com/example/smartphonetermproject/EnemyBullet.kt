@@ -8,23 +8,24 @@ import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IRecyclable
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.Sprite
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
-class Bullet private constructor(
+// Player 의 Bullet 과 거의 대칭인 ObjectPool 패턴 (private constructor + IRecyclable + get).
+// 진행 방향은 (vx, vy) 자유 — RANGED 가 Player 위치를 향해 aimed 단위벡터를 넘겨 발사한다.
+// default 인자 (vx=0, vy=SPEED) 는 직하 발사 호출자를 위한 fallback. hit 단계는 Bullet 과 동일.
+class EnemyBullet private constructor(
     gctx: GameContext,
-) : Sprite(gctx, R.mipmap.bullet_placeholder), IBoxCollidable, IRecyclable {
-    override var width = BULLET_WIDTH
-    override var height = BULLET_HEIGHT
+) : Sprite(gctx, R.mipmap.enemy_bullet), IBoxCollidable, IRecyclable {
+    override var width = ENEMY_BULLET_WIDTH
+    override var height = ENEMY_BULLET_HEIGHT
     override var x = 0f
     override var y = 0f
 
-    // hit 단계. Bullet 이 적에 명중하면 즉시 layer 에서 빠지지 않고 HIT_DURATION 동안 본체 sprite
-    // 대신 hit vfx 만 자기 위치에 그리다가 self-remove 한다 (dying enemy 와 같은 패턴 — laser_spark
-    // "주체가 자기 draw 에서 직접 그림" 원칙). hit 상태에서는 collisionRect 가 빈 사각형이라
-    // 다른 적과 또 부딪히지 않는다.
+    private var vx = 0f
+    private var vy = SPEED
+
     private var hitting = false
     private var hitTime = 0f
     private val hitRect = RectF()
 
-    // Bullet 의 충돌 박스는 그림 영역보다 80% 안쪽 inset. hit 상태면 빈 사각형으로 — 자동 검사 skip.
     private val _collisionRect = RectF()
     override val collisionRect: RectF
         get() {
@@ -41,13 +42,15 @@ class Bullet private constructor(
     init {
         syncDstRect()
         if (sharedHitBitmap == null) {
-            sharedHitBitmap = gctx.res.getBitmap(R.mipmap.vfx_player_hit)
+            sharedHitBitmap = gctx.res.getBitmap(R.mipmap.vfx_enemy_hit)
         }
     }
 
-    fun init(startX: Float, startY: Float): Bullet {
+    fun init(startX: Float, startY: Float, vx: Float = 0f, vy: Float = SPEED): EnemyBullet {
         x = startX
         y = startY
+        this.vx = vx
+        this.vy = vy
         hitting = false
         hitTime = 0f
         syncDstRect()
@@ -55,22 +58,27 @@ class Bullet private constructor(
     }
 
     override fun update(gctx: GameContext) {
-        // hit 단계는 시간만 카운트 — 이동/화면 밖 검사 모두 skip.
         if (hitting) {
             hitTime -= gctx.frameTime
             if (hitTime <= 0f) {
                 val scene = gctx.scene as? MainScene ?: return
-                scene.world.remove(this, MainScene.Layer.BULLET)
+                scene.world.remove(this, MainScene.Layer.ENEMY_BULLET)
             }
             return
         }
 
-        y -= SPEED * gctx.frameTime
+        x += vx * gctx.frameTime
+        y += vy * gctx.frameTime
         syncDstRect()
 
-        if (y + height / 2f < 0f) {
+        // aimed 탄은 좌·우·위로도 빠질 수 있으므로 사방 검사.
+        val outBottom = y - height / 2f > gctx.metrics.height
+        val outTop = y + height / 2f < 0f
+        val outRight = x - width / 2f > gctx.metrics.width
+        val outLeft = x + width / 2f < 0f
+        if (outBottom || outTop || outRight || outLeft) {
             val scene = gctx.scene as? MainScene ?: return
-            scene.world.remove(this, MainScene.Layer.BULLET)
+            scene.world.remove(this, MainScene.Layer.ENEMY_BULLET)
         }
     }
 
@@ -100,27 +108,29 @@ class Bullet private constructor(
     }
 
     companion object {
-        // 12×24 → 24×48 → 40×80 → 56×112. 마지막은 3주차 #4 시점, 사용자가 모든 객체 일괄 1.4배.
-        const val BULLET_WIDTH = 56f
-        const val BULLET_HEIGHT = 112f
-        const val SPEED = 1500f
-
-        // 1주차 무기는 1종이라 데미지를 상수로 둔다.
-        // 4주차 무기 시스템에서 Bullet.power 필드로 교체 예정.
+        // 24×36 → 40×60 → 56×84. 마지막은 3주차 #4 일괄 1.4배.
+        const val ENEMY_BULLET_WIDTH = 56f
+        const val ENEMY_BULLET_HEIGHT = 84f
+        // Player Bullet (1500f) 보다 한참 느리게 — RANGED 의 탄을 옆으로 회피할 여지가 있어야 함.
+        const val SPEED = 700f
         const val DAMAGE = 1
         private const val COLLISION_INSET_RATIO = 0.8f
 
-        // hit vfx — vfx_player_hit (구 muzzle flash 자산을 명중 효과로 재배치). 모든 Bullet 인스턴스가
-        // 공유하는 캐시 (sharedGauge 와 같은 패턴).
         private var sharedHitBitmap: Bitmap? = null
-        // 깜빡 보이고 사라지는 정도 — DIE_DURATION 과 같은 0.1초.
         private const val HIT_DURATION = 0.1f
-        private const val HIT_SIZE = 110f
+        private const val HIT_SIZE = 90f
 
-        fun get(gctx: GameContext, x: Float, y: Float): Bullet {
-            val scene = gctx.scene as? MainScene ?: return Bullet(gctx).init(x, y)
-            val bullet = scene.world.obtain(Bullet::class.java) ?: Bullet(gctx)
-            return bullet.init(x, y)
+        fun get(
+            gctx: GameContext,
+            x: Float,
+            y: Float,
+            vx: Float = 0f,
+            vy: Float = SPEED,
+        ): EnemyBullet {
+            val scene = gctx.scene as? MainScene
+                ?: return EnemyBullet(gctx).init(x, y, vx, vy)
+            val bullet = scene.world.obtain(EnemyBullet::class.java) ?: EnemyBullet(gctx)
+            return bullet.init(x, y, vx, vy)
         }
     }
 }

@@ -7,10 +7,9 @@ import android.graphics.RectF
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
-// 상단 중앙의 게임 경과 시간 표시.
-// 시간 값 자체는 `MainScene.elapsedSec` 가 들고 있고, 이 HUD 는 그것을 읽어서 mm:ss 형식으로 그릴 뿐.
-// (Score/ScoreLabel 과 동일한 "값은 Scene, 표시는 HUD" 패턴)
-// 사양상 60초 도달 시점이 보스 진입 시점이지만 2주차 #5 에서는 테스트용으로 10초.
+// 상단 중앙의 게임 경과 시간 / 보스 스테이지 라벨 표시.
+// MainScene 일반 스테이지에서는 `scene.elapsedSec` 를 mm:ss 로, BossScene 에서는 "BOSS STAGE" 텍스트로.
+// (Score/ScoreLabel 과 동일한 "값은 Scene, 표시는 HUD" 패턴 — 매 draw 마다 scene 의 현재 상태를 읽음)
 // 시안(02_normal_stage.png) 의 둥근 사각형 + 주황 테두리/텍스트 + 어두운 fill 패턴을 따른다.
 class BossTimerHud(private val gctx: GameContext) : IGameObject {
     private val boxRect = RectF(
@@ -51,18 +50,22 @@ class BossTimerHud(private val gctx: GameContext) : IGameObject {
         val scene = gctx.scene as? MainScene ?: return
         canvas.drawRoundRect(boxRect, CORNER_RADIUS, CORNER_RADIUS, boxFillPaint)
         canvas.drawRoundRect(boxRect, CORNER_RADIUS, CORNER_RADIUS, boxStrokePaint)
-        val totalSec = scene.elapsedSec.toInt()
-        val min = totalSec / 60
-        val sec = totalSec % 60
-        val text = "%02d:%02d".format(min, sec)
+        val text = if (scene.isBossStage) {
+            BOSS_LABEL
+        } else {
+            val totalSec = scene.elapsedSec.toInt()
+            "%02d:%02d".format(totalSec / 60, totalSec % 60)
+        }
         canvas.drawText(text, boxRect.centerX(), textBaselineY, textPaint)
     }
 
     companion object {
-        private const val BOX_WIDTH = 200f
+        // "BOSS STAGE" 가 mm:ss 보다 길어 박스 폭을 200 → 320 으로 키움.
+        private const val BOX_WIDTH = 320f
         private const val BOX_HEIGHT = 70f
         private const val BOX_TOP = 40f
         private const val CORNER_RADIUS = 18f
         private const val TEXT_SIZE = 50f
+        private const val BOSS_LABEL = "BOSS STAGE"
     }
 }

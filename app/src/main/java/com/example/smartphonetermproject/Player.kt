@@ -91,11 +91,15 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder),
 
     companion object {
         const val SPEED = 1100f
-        const val PLAYER_WIDTH = 140f
-        const val PLAYER_HEIGHT = 140f
+        // 80 → 100 → 140 → 200. 마지막 단계는 3주차 #4 시점, 사용자가 모든 게임 객체 가시성을
+        // 더 크게 원해서 일괄 1.4배 적용. 화면 폭 900 의 22% — 모바일 슈팅 기준 큰 편.
+        const val PLAYER_WIDTH = 200f
+        const val PLAYER_HEIGHT = 200f
         const val FIRE_INTERVAL = 0.3f
         const val BULLET_OFFSET = 8f
-        const val MAX_LIFE = 5
+        // 5 → 10. 3주차 #4 시점, 사용자가 RANGED 의 EnemyBullet 데미지 비중이 너무 강하다고 결정.
+        // hitDamage 는 그대로 두고 MAX_LIFE 만 늘려 한 방의 비중을 절반으로 (20% → 10%).
+        const val MAX_LIFE = 10
         private const val COLLISION_INSET_RATIO = 0.8f
     }
 }

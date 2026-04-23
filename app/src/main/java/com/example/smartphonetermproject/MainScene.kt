@@ -10,14 +10,19 @@ import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 open class MainScene(
     gctx: GameContext,
     backgroundResId: Int = R.mipmap.sky_bg,
-    // BossScene 으로 들어온 인스턴스에서는 다시 보스 진입을 트리거하지 않도록 막는 플래그.
-    isBossStage: Boolean = false,
+    // BossScene 으로 들어온 인스턴스에서는 (1) 다시 보스 진입을 트리거하지 않고
+    // (2) 일반 EnemyGenerator 를 world 에 추가하지 않으며 (3) 타이머 HUD 에 "BOSS STAGE" 텍스트.
+    // BossTimerHud / world 초기화에서 읽어야 하므로 val 로 노출.
+    val isBossStage: Boolean = false,
 ) : Scene(gctx) {
     enum class Layer {
         BACKGROUND,
         PLAYER,
         BULLET,
         ENEMY,
+        // 적이 발사한 탄. ENEMY 위에 그려져 적이 자기가 쏜 탄을 가리지 않게 한다.
+        // STARS parallax 보다는 아래라 별빛이 탄을 살짝 덮을 수 있는데, 시인성 측면에서 큰 문제는 없다.
+        ENEMY_BULLET,
         STARS,
         CONTROLLER,
         UI,
@@ -50,7 +55,9 @@ open class MainScene(
         add(background, Layer.BACKGROUND)
         add(player, Layer.PLAYER)
         add(stars, Layer.STARS)
-        add(enemyGenerator, Layer.CONTROLLER)
+        // 보스 스테이지에서는 일반 적이 spawn 되지 않는다 — 6주차 보스 패턴 작업 자리.
+        // EnemyGenerator 인스턴스 자체는 만들지만 world 에 안 들어가면 update/draw 가 호출되지 않음.
+        if (!isBossStage) add(enemyGenerator, Layer.CONTROLLER)
         add(collisionChecker, Layer.CONTROLLER)
         add(scoreLabel, Layer.UI)
         add(playerHpHud, Layer.UI)

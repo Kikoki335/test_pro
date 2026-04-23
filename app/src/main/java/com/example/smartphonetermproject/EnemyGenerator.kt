@@ -19,7 +19,9 @@ class EnemyGenerator(
 
     private fun spawn() {
         val scene = gctx.scene as? MainScene ?: return
-        val type = Enemy.Type.entries.random()
+        // 검증 단계용 임시 single-type spawn. SUICIDE/RANGED/SPLIT 중 한 줄만 바꿔 단독 검증.
+        // random 복원은 3주차 #5 에서.
+        val type = Enemy.Type.SPLIT
         val margin = type.width / 2f
         val x = margin + Random.nextFloat() * (gctx.metrics.width - 2 * margin)
         val enemy = Enemy.get(gctx, x, type)
