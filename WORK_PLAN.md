@@ -606,9 +606,9 @@ SUICIDE → RANGED → SPLIT 순서로 한 종류씩 도입하며 검증. 자폭
 - 3종 동시 등장 시 spawn 빈도, HP, Player 데미지 시각적 검증하면서 1차 밸런싱 (수치 조정만, 동작 추가 X).
 - 3주차 종료 빌드/플레이 확인.
 
-### 4주차 (~5/1, 누적) — 5 commits *(5주차 일부 당김)*
+### 4주차 (~5/1, 누적) — 5 commits *(5주차 일부 당김. 능력치 증가 sub-task 는 #3 보상 카드에 흡수)*
 
-> **commit 분할 단위 (사용자 결정)**: ① EXP 시스템 (ExpOrb + ExpLabel 숫자 HUD), ② 레벨업 시스템 (LevelUpScene + 카드 보상), ③ 무기 Registry + Dual Shot, ④ Triple Shot + Laser, ⑤ 능력치 보상 카드. 한 commit 안에 둘 이상의 시스템 섞지 말 것.
+> **commit 분할 단위 (사용자 결정)**: ① EXP 시스템 (ExpOrb + ExpLabel), ② 레벨업 구조 (LevelUpScene + push/pop, placeholder 카드 3장 모두 동일 텍스트, levelUp 만), ③ 보상 카드 (공격력 / 공격속도 / 탄환 개수 3종 stat 카드 + 좌상단 디버그 화면에 stat 수치 표시), ④ 무기 Registry + Dual Shot, ⑤ Triple Shot + Laser. 한 commit 안에 둘 이상의 시스템 섞지 말 것.
 
 #### [x] #1 — EXP 시스템 (ExpOrb + ExpLabel) *(코드 완료, 2026-05-01. 1 commit 단위)*
 
@@ -616,7 +616,7 @@ ExpOrb (구슬):
 - **선택**: 단순 `IGameObject + IBoxCollidable + IRecyclable` (Sprite 도 상속 X) — 본격 부모 추출은 4주차 다른 sub-task 들이 다 깔린 뒤 같은 패턴이 여러 군데 보일 때 검토.
 - placeholder: cyan 원 (`Color.rgb(34, 211, 238)`) + 밝은 청록 테두리. RADIUS = 18f. (7주차 그래픽 폴리싱에서 PNG 교체)
 - 동작: **drop 즉시부터 매 프레임 Player 방향 추적** (`ATTRACT_SPEED = 800f/s`, 거리 제한 없음 — 탄환처럼 spawn 후 Player 향해 이동, Player 가 움직이면 방향 갱신되는 homing) → `collidesWith(player)` 시 `player.gainExp(VALUE = 1)` + self-remove.
-- drop 시점: `Enemy.startDying(scene)` 안에서 SUICIDE/RANGED/SPLIT 본체가 죽으면 그 자리에 1개 spawn. SPLIT_MINION 은 제외 (본체 1마리 = orb 1개 룰).
+- drop 시점: `Enemy.startDying(scene)` 안에서 SUICIDE / RANGED / **SPLIT_MINION** 처치 시 그 자리에 1개 spawn. **SPLIT 본체는 제외** — 본체는 분열만 시키고 EXP 책임은 분열된 minion 들에게 넘김 (사용자 결정 — 분열 몬스터의 보상은 자식을 처치해야 받는 구조).
 - `MainScene.Layer.EXP_ORB` 추가 (ENEMY_BULLET 위, STARS 아래 — 적/탄과 함께 떠 보이게).
 
 ExpLabel (HUD):
@@ -627,28 +627,39 @@ ExpLabel (HUD):
 
 `Player` 에 `var exp: Int` + `gainExp(amount)` 추가.
 
-#### [ ] #2 — 레벨업 시스템 (LevelUpScene + 카드 보상)
+#### [x] #2 — 레벨업 구조 (LevelUpScene + push/pop, placeholder 카드) *(코드 완료, 2026-05-01)*
 
-- `Player` 에 `level`, `maxExp` (또는 `expForNextLevel`) 필드 추가. exp 가 maxExp 도달하면 level += 1, exp = 0 (또는 exp -= maxExp), maxExp 다음 단계 값으로 갱신.
-- ExpLabel 에 level 텍스트도 같이 표시 (`"Lv.N  EXP: e/m"` 같은 형태).
-- `LevelUpScene : Scene(gctx)` — 반투명 overlay, 가운데 카드 3장. 카드 종류는 #3/#5 (무기) / #5 (스탯) 도입 후 그 풀에서 무작위 3개. 4주차 #2 단계에서는 placeholder 카드 (예: "EXP +5" 같은 단순 보상 3개) 로 시작 가능.
-- `MainScene.update()` 에서 `player.exp >= player.maxExp` 면 `LevelUpScene(...).push()` — Scene stack 에 push 되면 `MainScene` 의 update 가 멈추므로 게임 정지.
-- 카드 클릭 시 보상 적용 → pop → MainScene 진행.
+- `Player` 에 `level: Int = 1`, `maxExp: Int = INITIAL_MAX_EXP`, `levelUp()` 함수 추가. `INITIAL_MAX_EXP = 5`, `MAX_EXP_GROWTH = 1.5f` (다음 단계 = floor(maxExp × 1.5), 단 최소 +1 보장). levelUp 은 exp -= maxExp, level += 1, maxExp 갱신.
+- `ExpLabel` 텍스트 → `"Lv.N  EXP e/m"` 형식.
+- `LevelUpScene : Scene(gctx)` — `MainScene` 참조를 받아 그 player 에 직접 보상 적용. 반투명 검정 overlay + "Level Up!" 타이틀 + 카드 3장 (가운데 가로 정렬, 230×320, 24px corner, cyan 테두리). **placeholder 단계 — 카드 3장 모두 같은 `"+ Lv N+1"` 텍스트, 어느 카드 클릭해도 `player.levelUp()` + `pop()` 만**. 카드별 보상 분기는 #3 에서.
+- `MainScene.update()` 에서 `if (player.exp >= player.maxExp) { LevelUpScene(gctx, this).push(); return }` — SceneStack 이 stack top 만 update 하므로 push 즉시 게임 정지. 카드 선택 후 pop 되어 MainScene 으로 복귀.
+- onTouchEvent: `ACTION_UP` + `metrics.fromScreen` 으로 카드 hit-test, 카드 밖 터치는 무시 (사용자가 카드 선택해야 게임 재개).
+- `BOSS_ENTER_TIME` 10f → **60f** (README §1 사양 정착) 도 같이 처리.
 
-#### [ ] #3 — 무기 시스템 베이스 (Weapon Registry) + Dual Shot
+#### [x] #3 — 보상 카드 (공격력 / 공격속도 / 탄환 개수 3종 stat) + 디버그 화면 stat 표시 *(코드 완료, 2026-05-01)*
+
+- `Player` 에 stat 3종 추가:
+  - `var attackMul: Float = 1f` — Bullet 데미지 = `(Bullet.DAMAGE × attackMul).toInt().coerceAtLeast(1)`
+  - `var fireRateMul: Float = 1f` — 발사 간격 = `FIRE_INTERVAL / fireRateMul`
+  - `var bulletCount: Int = 1` — `fireBullet` 에서 가로 spread spawn (BULLET_SPREAD = 50, 좌·우 대칭)
+- `Bullet` 에 인스턴스 필드 `var power: Int` 추가 (DragonFlight Player.kt:181 의 power 패턴). `Bullet.get(...)` 에 `power: Int = DAMAGE` default 인자. CollisionChecker 가 `enemy.decreaseLife(bullet.power)` 사용. `Bullet.DAMAGE` 는 default 상수로 유지.
+- `LevelUpScene` 카드 3장 분기 (사용자 결정 — 한 번에 체감되는 큰 폭):
+  - 0: "공격력 x2" → `player.attackMul *= ATK_BOOST = 2.0f`
+  - 1: "공속 +30%" → `player.fireRateMul *= RATE_BOOST = 1.3f`
+  - 2: "탄환 +1" → `player.bulletCount += 1`
+  - 모든 카드에서 `player.levelUp()` 같이.
+- `DebugStatLabel` 신규 — framework `GameView.drawDebugInfo` 와 같은 textSize 40 / MONOSPACE / 흰색. **위치는 화면 하단** (좌측 x=30, y=height-14, PlayerHpHud / ExpLabel 줄 아래 한 줄) — 좌상단 fps/grid 영역과 분리되어 보상 정보임을 명확히. + a2dg `GameView.debugPaint` color BLUE → WHITE 1줄 수정 (§8.2) — 검정+파랑 배경 가시성.
+
+#### [ ] #4 — 무기 시스템 베이스 (Weapon Registry) + Dual Shot
 
 - **활용**: `MapObject` Registry 패턴 (4/29 8017a48) 응용. `object WeaponRegistry { val all = listOf(DualShot, ...); fun random3() = ... }`
 - 각 Weapon 은 `fire(player, world)` 함수로 Bullet 생성 패턴 다르게 (Dual = 2발, Triple = 3발, Laser = 긴 직선)
-- 1주차의 자동 발사를 `currentWeapon.fire(...)` 로 교체
+- 1주차의 자동 발사를 `currentWeapon.fire(...)` 로 교체. #3 의 `bulletCount` stat 과는 다른 축 — bulletCount 는 같은 무기 안에서의 동시 발사 수, Weapon 은 발사 패턴/탄도 자체.
 
-#### [ ] #4 — Triple Shot + Laser
+#### [ ] #5 — Triple Shot + Laser
 
 - WeaponRegistry 에 추가
-- 보상 카드에서 선택 가능
-
-#### [ ] #5 — 능력치 증가 (5주차에서 당김)
-
-- Stat (데미지/공속/치명) 보상 카드에 추가. Player 멤버 `damageMul`, `fireRateMul`, `critRate`. Bullet 생성 시 / 데미지 계산 시 곱셈 적용
+- 보상 카드에서 선택 가능 (LevelUpScene 의 카드 풀이 stat + weapon 두 종류로 확장)
 
 ### 5주차 (~5/8, 누적) — 4 commits *(framework 진도 재확인 후 조정)*
 
@@ -753,12 +764,13 @@ ExpLabel (HUD):
 | die effect 패턴 (3주차 #4) | 적이 죽으면 즉시 사라짐 (die effect 없음) | Enemy 에 `dying` 상태 — life≤0 시 즉시 `world.remove` 안 하고 DIE_DURATION 동안 살아남아 자기 draw 에서 die vfx 만 그리다 self-remove | 사용자가 die vfx 자산을 만들어 적용 요청. **별도 Effect 클래스 / EFFECT layer 시도 (option A)** 했다가 폐기 → laser_spark "주체가 자기 draw" 원칙을 die 에도 확장 (option B) 가 framework 와 일관. CollisionChecker 의 `world.remove(enemy)` 모두 제거, 자기 정리 책임이 dying enemy 본인 |
 | hit vfx 패턴 (3주차 #4) | (해당 없음 — laser_spark 는 muzzle flash 였음) | Bullet/EnemyBullet 에 `hitting` 상태 — 명중 시 즉시 `world.remove` 안 하고 HIT_DURATION 동안 살아남아 hit vfx 만 자기 draw | 사용자 결정으로 muzzle flash 자산을 hit vfx 로 재배치 (option A) — 사격 게임 피드백은 명중 지점이 더 중요. dying enemy 와 정확히 같은 패턴이라 일관성 ↑ |
 | BossScene placeholder 동작 (1주차 #5 + 3주차 #4) | (해당 없음 — DragonFlight 에 보스 X) | `MainScene.isBossStage: Boolean` (val). BossScene 진입 시 `if (!isBossStage) add(enemyGenerator)` 로 일반 적 spawn 정지 + BossTimerHud 가 mm:ss 대신 "BOSS STAGE" 텍스트 (LabelUtil 패턴 — HUD 가 매 draw 시점 scene 상태 보고 텍스트 결정) | 6주차 보스 본체는 미정 — 일단 placeholder Scene 전환만 완료. 보스 스테이지의 시각적 신호(라벨)와 행동 분기(spawn 정지) 만 도입 |
+| `GameView.debugPaint` 색 (4주차 #3) | `Color.BLUE` | `Color.WHITE` | Sky Blaster 배경이 검정 + 파랑이라 BLUE 가 묻혀 잘 안 보임. framework a2dg 모듈을 직접 1줄 수정 — 단순 색 조정이라 framework 도구 도입 위반 X, 단 §11#10 (a2dg sync) 측면에서 reference 와 어긋나는 부분이라 의도적 차이로 기록 |
 
 ---
 
 ## 9. 현재 진척
 
-> **마지막 갱신**: 2026-05-01 (3주차 #1~#4 모두 디바이스 검증 완료. SUICIDE / RANGED (aimed + Y random) / SPLIT (= SUICIDE 본체 동작 + 분열) / VFX (hit + die 모두 dying/hitting 상태) 모두 정착값 확정. plan §7 sub-task 메모 / §8.2 의도적 차이표 / §10 디폴트값 모두 정착값 기준으로 정리 — **다음 세션이 §7 따라 구현하면 시행착오 단계 없이 한 번에 도달**. 사용자 결정으로 **3주차는 SUICIDE / RANGED / SPLIT / VFX / random 복원 5개 commit 으로 분할** 진행 (§7 3주차 머리말). 다음은 #5 EnemyGenerator random 복원. 코드 working tree 모두 unstaged, commit 미실시.)
+> **마지막 갱신**: 2026-05-01 (3주차 검증 모두 완료. 4주차 진입 — #1 EXP 시스템 (ExpOrb + ExpLabel) ✅, #2 레벨업 구조 (LevelUpScene + placeholder 카드 3장 모두 동일) 코드 완료 검증 중. BOSS_ENTER_TIME 60f 정착. 사용자 결정으로 **4주차 commit 분할** = ① EXP 시스템 / ② 레벨업 구조 / ③ 보상 카드 (공격력/공속/탄환 개수 3종 stat + 디버그 HUD stat 표시) / ④ 무기 Registry + Dual Shot / ⑤ Triple Shot + Laser. 다음은 #3 보상 카드. 코드 working tree 모두 unstaged.)
 
 ### 9.1 완료 / 진행 / 다음
 
@@ -782,8 +794,10 @@ ExpLabel (HUD):
 | ✅ 디바이스 검증 OK | **3주차 #4 VFX (hit + die)** | dying / hitting 상태 패턴 일관 적용. 별도 Effect 클래스 / EFFECT layer / muzzle flash 단계 모두 없음 |
 | ✅ 보강 완료 | **(1주차 #5) BossScene 진입 시 spawn 정지 + "BOSS STAGE" 라벨** | `isBossStage` val + 조건부 add + BossTimerHud 텍스트 분기 |
 | ✅ random 복원 완료 (밸런싱 후순위) | **3주차 #5 EnemyGenerator random 복원** | `SPAWNABLE_TYPES = Enemy.Type.entries.filter { it != SPLIT_MINION }` 캐시 + `.random()`. 수치 밸런싱은 7~8주차 polish 단계로 미룸 |
-| 🟡 코드 완료, 디바이스 검증 중 | **4주차 #1 EXP 시스템 (ExpOrb + ExpLabel)** | ExpOrb (cyan 원, drop 즉시 Player homing 800f/s) + ExpLabel (좌하단 HP 게이지 옆 cyan "EXP: N"). 1 commit 단위 |
-| ▶ **다음** | **4주차 #1 디바이스 검증 → #2 레벨업 시스템 (LevelUpScene + 카드 보상)** | 적 처치 시 cyan orb 가 즉시 Player 향해 끌려옴 + 흡수 시 EXP HUD 숫자 증가 확인. #2 는 maxExp 도달 시 Scene stack push 로 게임 정지 + 카드 3장 |
+| ✅ 디바이스 검증 OK | **4주차 #1 EXP 시스템 (ExpOrb + ExpLabel)** | ExpOrb (cyan 원, drop 즉시 Player homing 800f/s) + ExpLabel (좌하단 HP 게이지 옆 cyan "Lv.N EXP e/m") |
+| ✅ 디바이스 검증 OK | **4주차 #2 레벨업 구조 (LevelUpScene + placeholder 카드)** | level/maxExp/levelUp 구조. BOSS_ENTER_TIME 60f. |
+| 🟡 코드 완료, 디바이스 검증 중 | **4주차 #3 보상 카드 (공격력 / 공속 / 탄환 개수) + 디버그 HUD stat 표시** | Player.attackMul/fireRateMul/bulletCount + Bullet.power. LevelUpScene 카드 3장 분기 (×1.2 / ×1.15 / +1). DebugStatLabel 좌상단 표시. |
+| ▶ **다음** | **4주차 #3 디바이스 검증 → #4 무기 Registry + Dual Shot** | 카드 선택 시 좌상단 "ATK / RATE / COUNT" 즉시 변경 확인. 탄환 +1 누르면 화면에 2발 가로 spread |
 | ⏸ 대기 | 4~8주차 전부 | |
 
 ### 9.2 빌드 / 동작 확인 상태
@@ -918,9 +932,15 @@ DragonFlight 4/9 의 최종 enum 순서 `BACKGROUND, PLAYER, BULLET, ENEMY, CONT
     - **VFX 자산 6종**: `vfx_player_hit` (Bullet 명중), `vfx_enemy_hit` (EnemyBullet 명중), `vfx_suicide_die` / `vfx_ranged_die` / `vfx_split_burst` (SPLIT die 대용) / `vfx_minion_die` (Enemy 사망). 사용자가 mipmap 에 lowercase + underscore 이름으로 import.
     - **PlayerHpHud**: 시안(02_normal_stage.png) 에 맞춰 **좌하단 + 초록색** 처음부터. `Gauge.thickness` 는 1.0 단위 (예: 0.04f) — 픽셀 단위 X (§11#14).
     - **ScoreLabel**: `displayScore` 분리 + lerp 패턴 처음부터.
-    - **BOSS_ENTER_TIME**: 1주차 #5 테스트값 `10f` (실 사양 60f 는 6주차 #2 에서 되돌림).
+    - **BOSS_ENTER_TIME**: README §1 사양 그대로 **`60f`** (1주차 #5 시점 테스트값 10f → 4주차 #2 에서 60f 로 정착).
     - **MainScene 은 open class** + 세 생성자 파라미터 (`backgroundResId`, **`val isBossStage`**) 처음부터. **BossScene 진입 시 `if (!isBossStage) add(enemyGenerator, ...)` 로 spawn 정지** + **BossTimerHud 가 isBossStage 시 "BOSS STAGE" 라벨** (mm:ss 대신). BossScene = 한 줄 wrapper.
     - **에셋 매핑** (mipmap-xxxhdpi): `sky_bg`, `boss_bg`, `title_bg`, `sky_star`, `player_placeholder`, `bullet_placeholder`, `enemy_suicide`, `enemy_ranged`, `enemy_split`, `enemy_split_minion`, `enemy_bullet`, `vfx_player_hit`, `vfx_enemy_hit`, `vfx_suicide_die`, `vfx_ranged_die`, `vfx_split_burst`, `vfx_minion_die`.
+    - **EXP / 레벨 (4주차 #1~#2)**: `Player.exp`, `Player.level = 1`, `Player.maxExp = INITIAL_MAX_EXP = 5`, `MAX_EXP_GROWTH = 1.5f`. `gainExp(amount)` 는 누적만, `levelUp()` 은 외부 (LevelUpScene) 가 호출. ExpOrb (cyan 원, drop 즉시 Player homing 800f/s, value 1) → ExpLabel (좌하단 HP 게이지 옆 cyan, `"Lv.N  EXP e/m"`).
+    - **LevelUpScene (4주차 #2)**: MainScene 위 push, 반투명 검정 + 카드 3장 (230×320, cyan 테두리). #2 단계는 placeholder (3장 모두 동일 `"+ Lv N+1"` + `levelUp()` 만), #3 부터 카드별 보상 분기 (공격력 ×1.2 / 공속 ×1.15 / 탄환 +1).
+    - **Player stat 보상 (4주차 #3)**: `attackMul=1f`, `fireRateMul=1f`, `bulletCount=1`. Bullet 에 `var power: Int = DAMAGE`. fireBullet 에서 `fireCooldown = FIRE_INTERVAL / fireRateMul`, power = `(DAMAGE × attackMul).toInt().coerceAtLeast(1)`, bulletCount > 1 이면 `BULLET_SPREAD = 50f` 가로 spread.
+    - **카드 보상 배수 (4주차 #3)**: `ATK_BOOST = 2.0f`, `RATE_BOOST = 1.3f`, 탄환 `+1` (사용자 결정 — 한 번에 체감되는 큰 폭).
+    - **EXP drop 룰 (4주차 #1)**: `Enemy.startDying` 안에서 `if (type != Type.SPLIT) ExpOrb spawn` — SPLIT 본체는 분열만 시키고 EXP X, SPLIT_MINION 처치해야 보상.
+    - **DebugStatLabel (4주차 #3)**: textSize 40, `Typeface.MONOSPACE`, `Color.WHITE`. **위치는 화면 하단 좌측** (x=30, y=metrics.height-14), format `"ATK x%.2f RATE x%.2f COUNT %d"`. + framework `GameView.debugPaint` color BLUE → WHITE (§8.2 — Sky Blaster 검정+파랑 배경 가시성).
 
 17. **die / hit vfx 시 "별도 GameObject 만들기" 함정** — Effect 클래스 / EFFECT layer 를 만들어 spawn 하는 방식은 시행착오 끝에 폐기됨. framework laser_spark 의 "주체가 자기 draw" 원칙을 **dying enemy 와 hitting bullet 까지 일관 확장**하는 게 정답. 즉 죽거나 명중한 객체를 즉시 layer 에서 빼지 않고 짧은 시간 살려두며 자기가 vfx 그리다 self-remove. 자세한 패턴은 §11#16, sub-task 3주차 #4 참조.
 

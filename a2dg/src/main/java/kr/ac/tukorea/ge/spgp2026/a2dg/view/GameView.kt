@@ -202,7 +202,9 @@ class GameView @JvmOverloads constructor(
     }
     private val debugPaint by lazy {
         Paint().apply {
-            color = Color.BLUE
+            // Sky Blaster 의 배경이 검정 + 파랑이라 BLUE 가 잘 안 보임 — 흰색으로 변경.
+            // framework reference 와 의도적으로 다르게 간 부분 (§8.2 표 참조).
+            color = Color.WHITE
             textSize = 40f
             typeface = Typeface.MONOSPACE
         }

@@ -16,6 +16,12 @@ class Bullet private constructor(
     override var x = 0f
     override var y = 0f
 
+    // 4주차 #3 — Player.attackMul 보상이 적용된 데미지를 Bullet 인스턴스마다 들고 있음.
+    // CollisionChecker 가 enemy.decreaseLife(bullet.power) 로 사용. DragonFlight Player.kt:181 의
+    // power 패턴 그대로.
+    var power: Int = DAMAGE
+        private set
+
     // hit 단계. Bullet 이 적에 명중하면 즉시 layer 에서 빠지지 않고 HIT_DURATION 동안 본체 sprite
     // 대신 hit vfx 만 자기 위치에 그리다가 self-remove 한다 (dying enemy 와 같은 패턴 — laser_spark
     // "주체가 자기 draw 에서 직접 그림" 원칙). hit 상태에서는 collisionRect 가 빈 사각형이라
@@ -45,9 +51,10 @@ class Bullet private constructor(
         }
     }
 
-    fun init(startX: Float, startY: Float): Bullet {
+    fun init(startX: Float, startY: Float, power: Int = DAMAGE): Bullet {
         x = startX
         y = startY
+        this.power = power
         hitting = false
         hitTime = 0f
         syncDstRect()
@@ -117,10 +124,10 @@ class Bullet private constructor(
         private const val HIT_DURATION = 0.1f
         private const val HIT_SIZE = 110f
 
-        fun get(gctx: GameContext, x: Float, y: Float): Bullet {
-            val scene = gctx.scene as? MainScene ?: return Bullet(gctx).init(x, y)
+        fun get(gctx: GameContext, x: Float, y: Float, power: Int = DAMAGE): Bullet {
+            val scene = gctx.scene as? MainScene ?: return Bullet(gctx).init(x, y, power)
             val bullet = scene.world.obtain(Bullet::class.java) ?: Bullet(gctx)
-            return bullet.init(x, y)
+            return bullet.init(x, y, power)
         }
     }
 }

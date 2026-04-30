@@ -31,14 +31,32 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder),
     val dead: Boolean
         get() = life <= 0
 
-    // 4주차 #1 — Enemy 사망 시 drop 되는 ExpOrb 를 흡수해 누적. #2 에서 EXP gauge HUD 에 연동되고
-    // #3 에서 maxExp 도달 시 LevelUpScene 트리거한다. 4주차 #1 단계에서는 누적 값까지만.
+    // 4주차 #1~#2 — Enemy 사망 시 drop 되는 ExpOrb 를 흡수해 누적, maxExp 도달 시 MainScene 이
+    // LevelUpScene 을 push 해서 카드 3장을 띄운다. 카드 선택 시 levelUp() 으로 차감 + 다음 단계 maxExp.
     var exp = 0
+        private set
+    var level = 1
+        private set
+    var maxExp = INITIAL_MAX_EXP
         private set
 
     fun gainExp(amount: Int) {
         exp += amount
     }
+
+    fun levelUp() {
+        // exp 가 maxExp 보다 많이 누적된 상태에서 카드 선택까지 시간이 걸려도 잉여분이 다음 레벨로 이월.
+        exp -= maxExp
+        if (exp < 0) exp = 0
+        level += 1
+        maxExp = (maxExp * MAX_EXP_GROWTH).toInt().coerceAtLeast(maxExp + 1)
+    }
+
+    // 4주차 #3 — LevelUpScene 카드 보상으로 누적되는 stat. 디버그 HUD (DebugStatLabel) 가 매 draw
+    // 시점 이 값들을 읽어 화면에 표시하므로 적용이 즉시 시각 확인 가능.
+    var attackMul: Float = 1f
+    var fireRateMul: Float = 1f
+    var bulletCount: Int = 1
 
     private val minX = PLAYER_WIDTH / 2f
     private val maxX = gctx.metrics.width - PLAYER_WIDTH / 2f
@@ -79,11 +97,29 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder),
     private fun fireBullet(gctx: GameContext) {
         fireCooldown -= gctx.frameTime
         if (fireCooldown > 0f) return
-        fireCooldown = FIRE_INTERVAL
+        // fireRateMul 이 클수록 발사 간격 짧아짐 (×1.15 → 0.3 / 1.15 ≈ 0.26 초 간격).
+        fireCooldown = FIRE_INTERVAL / fireRateMul
 
         val scene = gctx.scene as? MainScene ?: return
-        val bullet = Bullet.get(gctx, x, y - PLAYER_HEIGHT / 2f - BULLET_OFFSET)
-        scene.world.add(bullet, MainScene.Layer.BULLET)
+        val muzzleY = y - PLAYER_HEIGHT / 2f - BULLET_OFFSET
+        // attackMul 적용한 정수 데미지. ×1.2 → 1 × 1.2 = 1.2 → 1, 두 번 받으면 1.44 → 1, 세 번이면
+        // 1.728 → 1 ... 즉 floor 라 stat 적은 단계에서 효과 없음. 보상 ×1.5 또는 ×2 쪽이 의미 있는데
+        // placeholder 라 일단 그대로. 본격 밸런싱은 4주차 #5 / 8주차에서.
+        val power = (Bullet.DAMAGE * attackMul).toInt().coerceAtLeast(1)
+
+        if (bulletCount <= 1) {
+            val bullet = Bullet.get(gctx, x, muzzleY, power)
+            scene.world.add(bullet, MainScene.Layer.BULLET)
+        } else {
+            // 가로 spread spawn — N발이 BULLET_SPREAD 간격으로 좌·우 대칭 배치.
+            val totalSpread = BULLET_SPREAD * (bulletCount - 1)
+            val startX = x - totalSpread / 2f
+            for (i in 0 until bulletCount) {
+                val bx = startX + i * BULLET_SPREAD
+                val bullet = Bullet.get(gctx, bx, muzzleY, power)
+                scene.world.add(bullet, MainScene.Layer.BULLET)
+            }
+        }
     }
 
     fun onTouchEvent(event: MotionEvent): Boolean {
@@ -110,5 +146,13 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder),
         // hitDamage 는 그대로 두고 MAX_LIFE 만 늘려 한 방의 비중을 절반으로 (20% → 10%).
         const val MAX_LIFE = 10
         private const val COLLISION_INSET_RATIO = 0.8f
+
+        // 첫 레벨업 필요 EXP. orb 1개 = exp 1 이고 적 1마리 처치 = orb 1개라
+        // 5 = 적 5마리 처치 후 첫 레벨업 (placeholder, 4주차 #5 능력치/밸런싱에서 재조정).
+        private const val INITIAL_MAX_EXP = 5
+        // 레벨이 오를수록 다음 maxExp 가 1.5 배 증가 — 5, 7, 10, 15, 22, ...
+        private const val MAX_EXP_GROWTH = 1.5f
+        // bulletCount 가 2 이상일 때 가로 spread 한 발 사이 간격 (가상 좌표계 px).
+        private const val BULLET_SPREAD = 50f
     }
 }

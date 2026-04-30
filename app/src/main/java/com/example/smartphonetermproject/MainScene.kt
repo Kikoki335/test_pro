@@ -42,6 +42,7 @@ open class MainScene(
     private val scoreLabel = ScoreLabel(gctx)
     private val playerHpHud = PlayerHpHud(gctx)
     private val expLabel = ExpLabel(gctx)
+    private val debugStatLabel = DebugStatLabel(gctx)
     private val bossTimerHud = BossTimerHud(gctx)
 
     var score = 0
@@ -65,6 +66,7 @@ open class MainScene(
         add(scoreLabel, Layer.UI)
         add(playerHpHud, Layer.UI)
         add(expLabel, Layer.UI)
+        add(debugStatLabel, Layer.UI)
         add(bossTimerHud, Layer.UI)
     }
 
@@ -74,6 +76,15 @@ open class MainScene(
 
     override fun update(gctx: GameContext) {
         super.update(gctx)
+
+        // 레벨업 트리거 — exp 가 maxExp 도달하면 LevelUpScene 을 stack 에 push 해서 게임 정지 +
+        // 카드 3장. 카드 선택 시 player.levelUp() 후 pop 되어 여기로 돌아온다.
+        // (push 후 SceneStack 이 top 만 update 하므로 같은 프레임에 또 push 되지 않음 — 가드 불필요)
+        if (player.exp >= player.maxExp) {
+            LevelUpScene(gctx, this).push()
+            return
+        }
+
         if (bossEntered) return
         elapsedSec += gctx.frameTime
         if (elapsedSec >= BOSS_ENTER_TIME) {
@@ -91,8 +102,7 @@ open class MainScene(
         // 별 parallax 는 배경보다 빨라야 우주선이 별빛 사이를 통과하는 느낌이 산다.
         // 너무 빠르면 시야가 산만하므로 1.5x 정도가 무난.
         private const val STARS_SPEED = 100f
-        // 보스 Scene 진입 시점.
-        // 사양 (README §1) 은 60초이지만 2주차 #5 단계에서는 테스트 편의상 10초로 둔다.
-        private const val BOSS_ENTER_TIME = 10f
+        // 보스 Scene 진입 시점. README §1 사양 그대로 60초.
+        private const val BOSS_ENTER_TIME = 60f
     }
 }

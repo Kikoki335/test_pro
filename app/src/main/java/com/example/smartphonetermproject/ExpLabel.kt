@@ -23,7 +23,11 @@ class ExpLabel(private val gctx: GameContext) : IGameObject {
 
     override fun draw(canvas: Canvas) {
         val scene = gctx.scene as? MainScene ?: return
-        label.draw(canvas, "EXP: ${scene.player.exp}", drawX, drawY)
+        // LevelUpScene 이 stack top 이라 update/draw 가 호출 안 되는 동안에도, 그 아래 MainScene
+        // 의 draw 가 한 번 더 호출되지는 않는다 (SceneStack 이 top 만 그리므로). 그래서 여기서 본
+        // exp 값은 항상 최신.
+        val player = scene.player
+        label.draw(canvas, "Lv.${player.level}  EXP ${player.exp}/${player.maxExp}", drawX, drawY)
     }
 
     companion object {

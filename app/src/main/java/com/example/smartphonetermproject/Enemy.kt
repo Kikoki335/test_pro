@@ -291,9 +291,9 @@ class Enemy private constructor(
         // dying 즉시 충돌 박스를 비워서 같은 프레임에 도는 다른 충돌 검사도 이 enemy 를 통과하게.
         collisionRect.setEmpty()
 
-        // 일반 적 (SUICIDE/RANGED/SPLIT) 만 ExpOrb drop. SPLIT_MINION 은 분열 자식이라 추가 drop 까지
-        // 누적되면 화면이 너무 번잡 — 본체 1마리 처치 = orb 1개 룰 유지.
-        if (type != Type.SPLIT_MINION) {
+        // SPLIT 본체는 분열만 시키고 EXP drop X — 분열된 SPLIT_MINION 들을 처치해야 보상이 나오는
+        // 구조가 게임 디자인상 자연 (사용자 결정). SUICIDE / RANGED / SPLIT_MINION 만 drop.
+        if (type != Type.SPLIT) {
             val orb = ExpOrb.get(gctx, x, y)
             scene.world.add(orb, MainScene.Layer.EXP_ORB)
         }

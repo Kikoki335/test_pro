@@ -58,7 +58,7 @@ class CollisionChecker(private val gctx: GameContext) : IGameObject {
 
                 if (bullet.collidesWith(enemy)) {
                     bullet.startHitting()
-                    enemy.decreaseLife(Bullet.DAMAGE)
+                    enemy.decreaseLife(bullet.power)
                     if (enemy.dead) {
                         // SPLIT 분열도 startDying 안에서 처리 — 부모의 x, y 가 살아 있는 시점이라
                         // 그 위치 그대로 minion 좌·우 사선 spawn.
