@@ -7,6 +7,7 @@ import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IBoxCollidable
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IGameObject
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IRecyclable
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
+import kotlin.math.atan2
 import kotlin.math.hypot
 
 // MissileWeapon 이 발사하는 추적 미사일. spawn 시 위 방향으로 시작해 매 프레임 가장 가까운 enemy
@@ -31,12 +32,11 @@ class HomingMissile private constructor(
                 _collisionRect.setEmpty()
                 return _collisionRect
             }
-            _collisionRect.set(
-                x - HALF_W * 0.8f,
-                y - HALF_H * 0.8f,
-                x + HALF_W * 0.8f,
-                y + HALF_H * 0.8f,
-            )
+            // sprite 는 회전하지만 collisionRect 는 그대로 axis-aligned (사용자 결정 — 시각/물리
+            // 약간 어긋나도 충돌 검사 단순함이 더 중요).
+            val hw = HALF_W * COLLISION_INSET_RATIO
+            val hh = HALF_H * COLLISION_INSET_RATIO
+            _collisionRect.set(x - hw, y - hh, x + hw, y + hh)
             return _collisionRect
         }
 
@@ -111,7 +111,19 @@ class HomingMissile private constructor(
         }
         val bmp = sharedBitmap ?: return
         dstRect.set(x - HALF_W, y - HALF_H, x + HALF_W, y + HALF_H)
+
+        // sprite 의 기본 "앞" 방향이 위쪽 (-y) 이므로, 진행 방향 (vx, vy) 에 맞추려면
+        // atan2(vy, vx) (양의 x축 기준 라디안) → 도 단위로 환산 → +90 보정 (위 방향이 -90 이라).
+        // vx == vy == 0 인 극단 케이스에는 회전 안 하고 sprite 기본 (위) 방향 유지.
+        val rotationDeg = if (vx == 0f && vy == 0f) {
+            0f
+        } else {
+            Math.toDegrees(atan2(vy, vx).toDouble()).toFloat() + 90f
+        }
+        canvas.save()
+        canvas.rotate(rotationDeg, x, y)
         canvas.drawBitmap(bmp, null, dstRect, null)
+        canvas.restore()
     }
 
     fun startHitting() {
@@ -151,6 +163,8 @@ class HomingMissile private constructor(
 
         private const val HIT_DURATION = 0.1f
         private const val HIT_HALF = 60f
+        // 다른 IBoxCollidable 과 같은 inset 룰 — 그림 영역의 80% 안쪽이 충돌 판정.
+        private const val COLLISION_INSET_RATIO = 0.8f
 
         // sharedGauge 패턴 — 모든 인스턴스 공유.
         private var sharedBitmap: Bitmap? = null

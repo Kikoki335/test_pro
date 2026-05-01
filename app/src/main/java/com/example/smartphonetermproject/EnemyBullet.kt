@@ -108,9 +108,10 @@ class EnemyBullet private constructor(
     }
 
     companion object {
-        // 24×36 → 40×60 → 56×84. 마지막은 3주차 #4 일괄 1.4배.
-        const val ENEMY_BULLET_WIDTH = 56f
-        const val ENEMY_BULLET_HEIGHT = 84f
+        // 24×36 → 40×60 → 56×84 → 80×120. 마지막은 4주차 #5 시점, RANGED 의 aimed 발사가 사선이라
+        // 회피 시 시각 인지가 더 중요해서 한 번 더 키움 (사용자 결정).
+        const val ENEMY_BULLET_WIDTH = 80f
+        const val ENEMY_BULLET_HEIGHT = 120f
         // Player Bullet (1500f) 보다 한참 느리게 — RANGED 의 탄을 옆으로 회피할 여지가 있어야 함.
         const val SPEED = 700f
         const val DAMAGE = 1

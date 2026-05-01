@@ -50,6 +50,9 @@ open class MainScene(
     private val debugStatLabel = DebugStatLabel(gctx)
     private val bossTimerHud = BossTimerHud(gctx)
 
+    // LevelUpScene 카드 풀 — MainScene 인스턴스 단위 (BossScene 진입 시 새 풀, placeholder).
+    val cardPool = CardPool()
+
     var score = 0
         private set
 
@@ -86,7 +89,8 @@ open class MainScene(
         // 카드 3장. 카드 선택 시 player.levelUp() 후 pop 되어 여기로 돌아온다.
         // (push 후 SceneStack 이 top 만 update 하므로 같은 프레임에 또 push 되지 않음 — 가드 불필요)
         if (player.exp >= player.maxExp) {
-            LevelUpScene(gctx, this).push()
+            val cards = cardPool.pickThree()
+            LevelUpScene(gctx, this, cards).push()
             return
         }
 

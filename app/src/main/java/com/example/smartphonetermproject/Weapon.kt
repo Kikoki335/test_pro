@@ -1,14 +1,15 @@
 package com.example.smartphonetermproject
 
+import android.graphics.Color
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 import kotlin.math.cos
 import kotlin.math.sin
 
 // 무기 등급 — 희귀 / 영웅 두 단계. 전설은 5주차 스킬 시스템에서 사용 (사용자 결정).
 // 각 무기의 fire 안에서 grade 를 받아 스탯 (탄환 발수, 빔 지속시간, 미사일 동시 발사 수 등) 을 분기.
-enum class WeaponGrade(val displayName: String) {
-    RARE("희귀"),
-    EPIC("영웅"),
+enum class WeaponGrade(val displayName: String, val cardColor: Int) {
+    RARE("희귀", Color.rgb(96, 165, 250)),
+    EPIC("영웅", Color.rgb(168, 85, 247)),
 }
 
 // CookieRun 4/29 commit `8017a48 MapObject 생성 규칙을 Registry 로 분리한다` 패턴 응용 —
@@ -18,6 +19,9 @@ sealed class Weapon {
     abstract val displayName: String
     // 기본 발사 간격 (초). Player.fireRateMul 가 이 값을 나눠 실제 cooldown 결정.
     abstract val fireInterval: Float
+    // LevelUpScene 의 무기 카드에 표시할 sprite resource. DefaultWeapon 은 카드 풀에 안 나오므로
+    // placeholder.
+    abstract val cardSpriteResId: Int
 
     // 발사 시점에 호출됨. Bullet/LaserBeam/HomingMissile 을 만들어 world.add.
     abstract fun fire(player: Player, scene: MainScene, gctx: GameContext, grade: WeaponGrade)
@@ -27,6 +31,7 @@ sealed class Weapon {
 object DefaultWeapon : Weapon() {
     override val displayName = "직진"
     override val fireInterval = 0.3f
+    override val cardSpriteResId = R.mipmap.bullet_placeholder
 
     override fun fire(player: Player, scene: MainScene, gctx: GameContext, grade: WeaponGrade) {
         val muzzleY = player.y - Player.PLAYER_HEIGHT / 2f - Player.BULLET_OFFSET
@@ -39,6 +44,7 @@ object DefaultWeapon : Weapon() {
 object ShotgunWeapon : Weapon() {
     override val displayName = "샷건"
     override val fireInterval = 0.6f
+    override val cardSpriteResId = R.mipmap.weapon_shotgun
 
     override fun fire(player: Player, scene: MainScene, gctx: GameContext, grade: WeaponGrade) {
         val pelletCount = if (grade == WeaponGrade.EPIC) 5 else 3
@@ -70,6 +76,7 @@ object LaserWeapon : Weapon() {
     override val displayName = "레이저"
     // fireInterval > lifetime 이라 빔 끊김 짧게. 영웅은 lifetime 1초 + cooldown 0.2초 = 1.2.
     override val fireInterval = 1.2f
+    override val cardSpriteResId = R.mipmap.weapon_laser
 
     override fun fire(player: Player, scene: MainScene, gctx: GameContext, grade: WeaponGrade) {
         val lifetime = if (grade == WeaponGrade.EPIC) 1.0f else 0.6f
@@ -85,6 +92,7 @@ object LaserWeapon : Weapon() {
 object MissileWeapon : Weapon() {
     override val displayName = "유도 미사일"
     override val fireInterval = 0.8f
+    override val cardSpriteResId = R.mipmap.weapon_homing
 
     override fun fire(player: Player, scene: MainScene, gctx: GameContext, grade: WeaponGrade) {
         val missileCount = if (grade == WeaponGrade.EPIC) 2 else 1
