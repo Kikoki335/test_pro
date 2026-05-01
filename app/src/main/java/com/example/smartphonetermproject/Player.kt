@@ -6,6 +6,7 @@ import kr.ac.tukorea.ge.spgp2026.a2dg.objects.IBoxCollidable
 import kr.ac.tukorea.ge.spgp2026.a2dg.objects.Sprite
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 import kotlin.math.hypot
+import kotlin.random.Random
 
 class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder), IBoxCollidable {
     override var width = PLAYER_WIDTH
@@ -56,7 +57,19 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder),
     // 시점 이 값들을 읽어 화면에 표시하므로 적용이 즉시 시각 확인 가능.
     var attackMul: Float = 1f
     var fireRateMul: Float = 1f
-    var bulletCount: Int = 1
+    var critRate: Float = 0f
+
+    // 4주차 #4 — 무기 종류 + 등급. 발사는 currentWeapon.fire(this, ...) 한 줄로 위임.
+    // 시작 무기 / 등급은 사용자가 무기 검증 흐름에 따라 한 줄씩 바꿔가며 테스트
+    // (EnemyGenerator 의 single-type spawn 검증과 같은 패턴).
+    var currentWeapon: Weapon = ShotgunWeapon
+    var weaponGrade: WeaponGrade = WeaponGrade.RARE
+
+    // Bullet/HomingMissile/LaserBeam 등 모든 발사물이 사용하는 데미지 계산. attackMul + critRate 반영.
+    fun calculatePower(): Int {
+        val basePower = (Bullet.DAMAGE * attackMul).toInt().coerceAtLeast(1)
+        return if (Random.nextFloat() < critRate) basePower * CRIT_MUL else basePower
+    }
 
     private val minX = PLAYER_WIDTH / 2f
     private val maxX = gctx.metrics.width - PLAYER_WIDTH / 2f
@@ -97,29 +110,11 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder),
     private fun fireBullet(gctx: GameContext) {
         fireCooldown -= gctx.frameTime
         if (fireCooldown > 0f) return
-        // fireRateMul 이 클수록 발사 간격 짧아짐 (×1.15 → 0.3 / 1.15 ≈ 0.26 초 간격).
-        fireCooldown = FIRE_INTERVAL / fireRateMul
+        // 무기마다 다른 fireInterval. fireRateMul 이 클수록 발사 간격 짧아짐.
+        fireCooldown = currentWeapon.fireInterval / fireRateMul
 
         val scene = gctx.scene as? MainScene ?: return
-        val muzzleY = y - PLAYER_HEIGHT / 2f - BULLET_OFFSET
-        // attackMul 적용한 정수 데미지. ×1.2 → 1 × 1.2 = 1.2 → 1, 두 번 받으면 1.44 → 1, 세 번이면
-        // 1.728 → 1 ... 즉 floor 라 stat 적은 단계에서 효과 없음. 보상 ×1.5 또는 ×2 쪽이 의미 있는데
-        // placeholder 라 일단 그대로. 본격 밸런싱은 4주차 #5 / 8주차에서.
-        val power = (Bullet.DAMAGE * attackMul).toInt().coerceAtLeast(1)
-
-        if (bulletCount <= 1) {
-            val bullet = Bullet.get(gctx, x, muzzleY, power)
-            scene.world.add(bullet, MainScene.Layer.BULLET)
-        } else {
-            // 가로 spread spawn — N발이 BULLET_SPREAD 간격으로 좌·우 대칭 배치.
-            val totalSpread = BULLET_SPREAD * (bulletCount - 1)
-            val startX = x - totalSpread / 2f
-            for (i in 0 until bulletCount) {
-                val bx = startX + i * BULLET_SPREAD
-                val bullet = Bullet.get(gctx, bx, muzzleY, power)
-                scene.world.add(bullet, MainScene.Layer.BULLET)
-            }
-        }
+        currentWeapon.fire(this, scene, gctx, weaponGrade)
     }
 
     fun onTouchEvent(event: MotionEvent): Boolean {
@@ -152,7 +147,7 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder),
         private const val INITIAL_MAX_EXP = 5
         // 레벨이 오를수록 다음 maxExp 가 1.5 배 증가 — 5, 7, 10, 15, 22, ...
         private const val MAX_EXP_GROWTH = 1.5f
-        // bulletCount 가 2 이상일 때 가로 spread 한 발 사이 간격 (가상 좌표계 px).
-        private const val BULLET_SPREAD = 50f
+        // 치명타 발생 시 데미지 배수.
+        private const val CRIT_MUL = 3
     }
 }

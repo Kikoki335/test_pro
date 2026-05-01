@@ -84,6 +84,24 @@ class CollisionChecker(private val gctx: GameContext) : IGameObject {
                 }
             }
         }
+
+        // MISSILE ↔ ENEMY — Bullet 패턴 거의 그대로. dying enemy 는 collisionRect 가 비어 있어 자동 skip.
+        // (LaserBeam 은 자기 update 안에서 직접 충돌 처리하므로 여기서는 다루지 않음.)
+        scene.world.forEachReversedAt(MainScene.Layer.MISSILE) { mObject ->
+            val missile = mObject as? HomingMissile ?: return@forEachReversedAt
+            scene.world.forEachReversedAt(MainScene.Layer.ENEMY) { enemyObj ->
+                val enemy = enemyObj as? Enemy ?: return@forEachReversedAt
+                if (missile.collidesWith(enemy)) {
+                    enemy.decreaseLife(missile.power)
+                    missile.startHitting()
+                    if (enemy.dead) {
+                        enemy.startDying(scene)
+                        scene.addScore(enemy.score)
+                    }
+                    return@forEachReversedAt  // 이 missile 은 끝, 다음 missile 로
+                }
+            }
+        }
     }
 
     override fun draw(canvas: Canvas) {

@@ -650,16 +650,27 @@ ExpLabel (HUD):
   - 모든 카드에서 `player.levelUp()` 같이.
 - `DebugStatLabel` 신규 — framework `GameView.drawDebugInfo` 와 같은 textSize 40 / MONOSPACE / 흰색. **위치는 화면 하단** (좌측 x=30, y=height-14, PlayerHpHud / ExpLabel 줄 아래 한 줄) — 좌상단 fps/grid 영역과 분리되어 보상 정보임을 명확히. + a2dg `GameView.debugPaint` color BLUE → WHITE 1줄 수정 (§8.2) — 검정+파랑 배경 가시성.
 
-#### [ ] #4 — 무기 시스템 베이스 (Weapon Registry) + Dual Shot
+#### [x] #4 — Weapon Registry + 4종 (Default / Shotgun / Laser / Missile) + 등급 시스템 *(코드 완료, 2026-05-01)*
 
-- **활용**: `MapObject` Registry 패턴 (4/29 8017a48) 응용. `object WeaponRegistry { val all = listOf(DualShot, ...); fun random3() = ... }`
-- 각 Weapon 은 `fire(player, world)` 함수로 Bullet 생성 패턴 다르게 (Dual = 2발, Triple = 3발, Laser = 긴 직선)
-- 1주차의 자동 발사를 `currentWeapon.fire(...)` 로 교체. #3 의 `bulletCount` stat 과는 다른 축 — bulletCount 는 같은 무기 안에서의 동시 발사 수, Weapon 은 발사 패턴/탄도 자체.
+- **활용**: CookieRun 4/29 `8017a48` MapObject Registry 패턴 응용 — `sealed class Weapon` + 4 object + `WeaponRegistry`.
+- `enum class WeaponGrade { RARE, EPIC }` — 2단계만 (전설은 5주차 스킬 자리, 사용자 결정).
+- `Weapon` 추상 멤버: `displayName`, `fireInterval`, `fire(player, scene, gctx, grade)`.
+- 4종 동작:
+  - `DefaultWeapon` (직진, fireInterval 0.3) — 기존 `fireBullet` 의 단순 직진 한 발.
+  - `ShotgunWeapon` (부채꼴, 0.6) — 희귀 3발 ±15° / 영웅 5발 ±20°. Bullet 의 vx/vy 인자로 사선 발사.
+  - `LaserWeapon` (직선 관통, 1.2) — `LaserBeam` 별도 클래스. 희귀 0.6초 / 영웅 1.0초 지속, `LASER_TICK_INTERVAL = 0.1f` 마다 빔 안 enemy 들에 데미지 (자기 update 에서 직접 처리, CollisionChecker 분기 X). 빔은 매 프레임 Player 위치 따라 x 갱신.
+  - `MissileWeapon` (추적, 0.8) — `HomingMissile` 별도 클래스. 희귀 1발 / 영웅 2발 (좌·우 ±30 동시). 매 프레임 가장 가까운 enemy 방향으로 vx/vy lerp (TURN_RATE = 6f).
+- `Player.currentWeapon: Weapon` + `weaponGrade: WeaponGrade`. 시작값 = `ShotgunWeapon` + `RARE` (사용자 결정 — 검증 단계 한 줄 변경으로 무기 교체).
+- `Player.fireBullet` → `currentWeapon.fire(this, scene, gctx, weaponGrade)` 한 줄 위임.
+- `Player.calculatePower(): Int` 추가 — `attackMul + critRate` 적용한 데미지 계산을 모든 Weapon 이 공유.
+- `Bullet` 에 `vx, vy` 인자 추가 (default = 위쪽 직진), 화면 밖 검사를 사방으로 확장 — Shotgun 의 사선 발사 지원.
+- `MainScene.Layer` 에 `LASER`, `MISSILE` 추가 (BULLET 위, ENEMY 아래).
+- `CollisionChecker` — MISSILE ↔ ENEMY 검사 추가 (Bullet ↔ Enemy 와 같은 패턴, 충돌 시 `world.remove(missile)`). LASER 는 자체 처리.
 
-#### [ ] #5 — Triple Shot + Laser
+#### [ ] #5 — 무기 검증 (Shotgun / Laser / Missile 단계별) + LevelUpScene 무기 카드 통합
 
-- WeaponRegistry 에 추가
-- 보상 카드에서 선택 가능 (LevelUpScene 의 카드 풀이 stat + weapon 두 종류로 확장)
+- 사용자가 `Player.currentWeapon` 한 줄 바꿔가며 단독 검증 (EnemyGenerator single-type 패턴). Shotgun → Laser → Missile 순서.
+- 검증 끝나면 LevelUpScene 카드 풀에 무기/등급 카드 통합 (예: 같은 무기 다시 받으면 RARE → EPIC 업그레이드).
 
 ### 5주차 (~5/8, 누적) — 4 commits *(framework 진도 재확인 후 조정)*
 
@@ -796,8 +807,9 @@ ExpLabel (HUD):
 | ✅ random 복원 완료 (밸런싱 후순위) | **3주차 #5 EnemyGenerator random 복원** | `SPAWNABLE_TYPES = Enemy.Type.entries.filter { it != SPLIT_MINION }` 캐시 + `.random()`. 수치 밸런싱은 7~8주차 polish 단계로 미룸 |
 | ✅ 디바이스 검증 OK | **4주차 #1 EXP 시스템 (ExpOrb + ExpLabel)** | ExpOrb (cyan 원, drop 즉시 Player homing 800f/s) + ExpLabel (좌하단 HP 게이지 옆 cyan "Lv.N EXP e/m") |
 | ✅ 디바이스 검증 OK | **4주차 #2 레벨업 구조 (LevelUpScene + placeholder 카드)** | level/maxExp/levelUp 구조. BOSS_ENTER_TIME 60f. |
-| 🟡 코드 완료, 디바이스 검증 중 | **4주차 #3 보상 카드 (공격력 / 공속 / 탄환 개수) + 디버그 HUD stat 표시** | Player.attackMul/fireRateMul/bulletCount + Bullet.power. LevelUpScene 카드 3장 분기 (×1.2 / ×1.15 / +1). DebugStatLabel 좌상단 표시. |
-| ▶ **다음** | **4주차 #3 디바이스 검증 → #4 무기 Registry + Dual Shot** | 카드 선택 시 좌상단 "ATK / RATE / COUNT" 즉시 변경 확인. 탄환 +1 누르면 화면에 2발 가로 spread |
+| ✅ 검증 OK | **4주차 #3 보상 카드 (공격력 / 공속 / 치명타) + 디버그 HUD stat 표시** | bulletCount → critRate (탄환수는 무기 등급 영역). ATK x2 / RATE +30% / CRIT +50%, CRIT_MUL=3 |
+| 🟡 코드 완료, 디바이스 검증 중 | **4주차 #4 Weapon Registry + 4종 + 등급** | sealed Weapon + DefaultWeapon/ShotgunWeapon/LaserWeapon/MissileWeapon + WeaponGrade(RARE/EPIC). Bullet vx/vy, LaserBeam/HomingMissile 별도. Player 시작값 = ShotgunWeapon RARE |
+| ▶ **다음** | **#4 검증 단계별 (currentWeapon 한 줄 변경): Shotgun → Laser → Missile → 등급 EPIC** | 각 무기 동작 + 등급별 차이 + critRate 데미지 적용 확인 |
 | ⏸ 대기 | 4~8주차 전부 | |
 
 ### 9.2 빌드 / 동작 확인 상태

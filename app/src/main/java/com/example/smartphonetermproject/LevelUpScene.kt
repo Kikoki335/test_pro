@@ -69,7 +69,7 @@ class LevelUpScene(
     private val cardLabels = listOf(
         "공격력" to "x2",
         "공속" to "+30%",
-        "탄환" to "+1",
+        "치명타" to "+50%",
     )
 
     override fun update(gctx: GameContext) {
@@ -115,7 +115,7 @@ class LevelUpScene(
         when (idx) {
             0 -> player.attackMul *= ATK_BOOST
             1 -> player.fireRateMul *= RATE_BOOST
-            2 -> player.bulletCount += 1
+            2 -> player.critRate = (player.critRate + CRIT_BOOST).coerceAtMost(1f)
         }
         player.levelUp()
         pop()
@@ -129,8 +129,9 @@ class LevelUpScene(
         private const val CARD_CORNER = 24f
         private const val CARD_TEXT_SIZE = 56f
         // 카드 보상 적용 배수 — 사용자 결정으로 눈에 띄게 큰 폭. 한 번 받으면 효과 즉시 체감.
-        // 누적 시 4번 ×2 = 16배, 4번 ×1.3 = 약 2.86배.
+        // 누적 시 4번 ×2 = 16배, 4번 ×1.3 = 약 2.86배. 치명타는 50% 씩 누적 (1.0 캡 = 2회면 max).
         private const val ATK_BOOST = 2.0f
         private const val RATE_BOOST = 1.3f
+        private const val CRIT_BOOST = 0.5f
     }
 }

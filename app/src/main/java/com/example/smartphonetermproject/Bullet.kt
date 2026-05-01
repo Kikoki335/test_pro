@@ -9,7 +9,7 @@ import kr.ac.tukorea.ge.spgp2026.a2dg.objects.Sprite
 import kr.ac.tukorea.ge.spgp2026.a2dg.view.GameContext
 
 class Bullet private constructor(
-    gctx: GameContext,
+    private val gctx: GameContext,
 ) : Sprite(gctx, R.mipmap.bullet_placeholder), IBoxCollidable, IRecyclable {
     override var width = BULLET_WIDTH
     override var height = BULLET_HEIGHT
@@ -21,6 +21,11 @@ class Bullet private constructor(
     // power 패턴 그대로.
     var power: Int = DAMAGE
         private set
+
+    // 4주차 #4 — 무기 종류에 따라 직진(default) / 부채꼴(샷건) 등 다른 방향으로 발사. EnemyBullet 과
+    // 같은 (vx, vy) 인자 패턴. default = 위쪽 직진 (vy = -SPEED).
+    private var vx = 0f
+    private var vy = -SPEED
 
     // hit 단계. Bullet 이 적에 명중하면 즉시 layer 에서 빠지지 않고 HIT_DURATION 동안 본체 sprite
     // 대신 hit vfx 만 자기 위치에 그리다가 self-remove 한다 (dying enemy 와 같은 패턴 — laser_spark
@@ -44,17 +49,30 @@ class Bullet private constructor(
             return _collisionRect
         }
 
+    // 무기별 hit vfx 가 다르므로 인스턴스 필드. init 시점에 결정.
+    private var hitBitmap: Bitmap? = null
+
     init {
         syncDstRect()
-        if (sharedHitBitmap == null) {
-            sharedHitBitmap = gctx.res.getBitmap(R.mipmap.vfx_player_hit)
-        }
     }
 
-    fun init(startX: Float, startY: Float, power: Int = DAMAGE): Bullet {
+    fun init(
+        startX: Float,
+        startY: Float,
+        power: Int = DAMAGE,
+        vx: Float = 0f,
+        vy: Float = -SPEED,
+        // 무기 종류에 따라 sprite 와 hit vfx 가 다름. default = 직진 무기용 placeholder + 흰 충격파.
+        spriteResId: Int = R.mipmap.bullet_placeholder,
+        hitVfxResId: Int = R.mipmap.vfx_player_hit,
+    ): Bullet {
         x = startX
         y = startY
         this.power = power
+        this.vx = vx
+        this.vy = vy
+        bitmap = gctx.res.getBitmap(spriteResId)
+        hitBitmap = sharedHitBitmaps.getOrPut(hitVfxResId) { gctx.res.getBitmap(hitVfxResId) }
         hitting = false
         hitTime = 0f
         syncDstRect()
@@ -72,10 +90,16 @@ class Bullet private constructor(
             return
         }
 
-        y -= SPEED * gctx.frameTime
+        x += vx * gctx.frameTime
+        y += vy * gctx.frameTime
         syncDstRect()
 
-        if (y + height / 2f < 0f) {
+        // 사방 화면 밖 검사 — 사선/부채꼴 발사가 좌·우로도 빠질 수 있음.
+        val outBottom = y - height / 2f > gctx.metrics.height
+        val outTop = y + height / 2f < 0f
+        val outRight = x - width / 2f > gctx.metrics.width
+        val outLeft = x + width / 2f < 0f
+        if (outBottom || outTop || outRight || outLeft) {
             val scene = gctx.scene as? MainScene ?: return
             scene.world.remove(this, MainScene.Layer.BULLET)
         }
@@ -83,7 +107,7 @@ class Bullet private constructor(
 
     override fun draw(canvas: Canvas) {
         if (hitting) {
-            val bmp = sharedHitBitmap ?: return
+            val bmp = hitBitmap ?: return
             val size = HIT_SIZE
             hitRect.set(
                 x - size / 2f,
@@ -117,17 +141,26 @@ class Bullet private constructor(
         const val DAMAGE = 1
         private const val COLLISION_INSET_RATIO = 0.8f
 
-        // hit vfx — vfx_player_hit (구 muzzle flash 자산을 명중 효과로 재배치). 모든 Bullet 인스턴스가
-        // 공유하는 캐시 (sharedGauge 와 같은 패턴).
-        private var sharedHitBitmap: Bitmap? = null
+        // 무기 종류별 hit vfx 캐시 — 같은 vfxResId 면 재사용 (sharedGauge / sharedDieBitmaps 와 같은 패턴).
+        private val sharedHitBitmaps = mutableMapOf<Int, Bitmap>()
         // 깜빡 보이고 사라지는 정도 — DIE_DURATION 과 같은 0.1초.
         private const val HIT_DURATION = 0.1f
         private const val HIT_SIZE = 110f
 
-        fun get(gctx: GameContext, x: Float, y: Float, power: Int = DAMAGE): Bullet {
-            val scene = gctx.scene as? MainScene ?: return Bullet(gctx).init(x, y, power)
+        fun get(
+            gctx: GameContext,
+            x: Float,
+            y: Float,
+            power: Int = DAMAGE,
+            vx: Float = 0f,
+            vy: Float = -SPEED,
+            spriteResId: Int = R.mipmap.bullet_placeholder,
+            hitVfxResId: Int = R.mipmap.vfx_player_hit,
+        ): Bullet {
+            val scene = gctx.scene as? MainScene
+                ?: return Bullet(gctx).init(x, y, power, vx, vy, spriteResId, hitVfxResId)
             val bullet = scene.world.obtain(Bullet::class.java) ?: Bullet(gctx)
-            return bullet.init(x, y, power)
+            return bullet.init(x, y, power, vx, vy, spriteResId, hitVfxResId)
         }
     }
 }

@@ -19,6 +19,11 @@ open class MainScene(
         BACKGROUND,
         PLAYER,
         BULLET,
+        // LaserWeapon 의 빔 — 화면 위에서 Player 머리까지 세로 직사각형. BULLET 위에 떠야 빔이 일반
+        // 탄을 가려서 시인성 ↑.
+        LASER,
+        // MissileWeapon 의 추적 미사일 — Bullet 변종이지만 추적 로직이 달라 별도 layer 로 분리.
+        MISSILE,
         ENEMY,
         // 적이 발사한 탄. ENEMY 위에 그려져 적이 자기가 쏜 탄을 가리지 않게 한다.
         // STARS parallax 보다는 아래라 별빛이 탄을 살짝 덮을 수 있는데, 시인성 측면에서 큰 문제는 없다.

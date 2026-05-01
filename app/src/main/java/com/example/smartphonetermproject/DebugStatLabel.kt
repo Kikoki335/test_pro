@@ -23,10 +23,10 @@ class DebugStatLabel(private val gctx: GameContext) : IGameObject {
     override fun draw(canvas: Canvas) {
         val scene = gctx.scene as? MainScene ?: return
         val player = scene.player
-        val text = "ATK x%.2f RATE x%.2f COUNT %d".format(
+        val text = "ATK x%.2f RATE x%.2f CRIT %d%%".format(
             player.attackMul,
             player.fireRateMul,
-            player.bulletCount,
+            (player.critRate * 100).toInt(),
         )
         label.draw(canvas, text, MARGIN_X, drawY)
     }
