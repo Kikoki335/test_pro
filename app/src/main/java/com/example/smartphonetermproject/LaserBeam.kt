@@ -28,6 +28,8 @@ class LaserBeam private constructor(
     private var elapsed = 0f
     private var tickCooldown = 0f
     private var power = 0
+    // 빔 시각/충돌 폭의 절반. 등급별 다름 (희귀 = 가는 빔, 영웅 = 굵은 빔).
+    private var beamHalf = 0f
 
     private val beamRect = RectF()
     override val collisionRect = RectF()
@@ -38,12 +40,13 @@ class LaserBeam private constructor(
         }
     }
 
-    fun init(startBottom: Float, lifetime: Float, power: Int): LaserBeam {
+    fun init(startBottom: Float, lifetime: Float, power: Int, beamHalf: Float): LaserBeam {
         this.beamBottom = startBottom
         this.lifetime = lifetime
         this.elapsed = 0f
         this.tickCooldown = 0f
         this.power = power
+        this.beamHalf = beamHalf
         // x 는 update 에서 매 프레임 Player 따라 갱신.
         return this
     }
@@ -82,14 +85,16 @@ class LaserBeam private constructor(
 
     override fun draw(canvas: Canvas) {
         val bmp = sharedBitmap ?: return
-        // weapon_laser PNG 를 빔 영역 (가로 BEAM_HALF*2, 세로 0~beamBottom) 에 stretch 그리기.
-        beamRect.set(x - BEAM_HALF, 0f, x + BEAM_HALF, beamBottom)
+        // weapon_laser PNG 를 빔 영역 (가로 beamHalf*2, 세로 0~beamBottom) 에 stretch 그리기.
+        beamRect.set(x - beamHalf, 0f, x + beamHalf, beamBottom)
         canvas.drawBitmap(bmp, null, beamRect, null)
     }
 
     private fun updateCollisionRect() {
-        // 충돌 폭은 BEAM_HALF 의 절반 (실제 시각보다 좁게 — sprite 의 글로우 영역까지 충돌하면 너무 넓음).
-        val half = BEAM_HALF * 0.5f
+        // 충돌 폭은 시각 빔의 30% — "충돌박스는 실제 액터보다 작아야 자연스럽다" 룰 (사용자 결정,
+        // framework 의 inset 0.8 보다 더 좁은 이유는 영웅 빔 시각 폭이 300px 까지 커지기 때문 —
+        // 비율을 같이 키우면 빔 옆 글로우 영역까지 충돌해 시각/물리 어긋남).
+        val half = beamHalf * COLLISION_INSET_RATIO
         collisionRect.set(x - half, 0f, x + half, beamBottom)
     }
 
@@ -97,19 +102,25 @@ class LaserBeam private constructor(
     }
 
     companion object {
-        // 빔 시각 폭 (PNG 를 stretch 할 가로 영역). PNG 의 가로/세로 비율과 무관하게 stretch.
-        private const val BEAM_HALF = 50f
         // 매 0.1 초마다 데미지 — 1초 lifetime 이면 10 틱.
         private const val LASER_TICK_INTERVAL = 0.1f
+        // 충돌 폭이 시각 폭에서 차지하는 비율 — 빔 코어 영역만 데미지, 글로우 영역은 시각 효과만.
+        private const val COLLISION_INSET_RATIO = 0.15f
 
         // sharedGauge 패턴 — 모든 LaserBeam 인스턴스 공유.
         private var sharedBitmap: Bitmap? = null
 
-        fun get(gctx: GameContext, startBottom: Float, lifetime: Float, power: Int): LaserBeam {
+        fun get(
+            gctx: GameContext,
+            startBottom: Float,
+            lifetime: Float,
+            power: Int,
+            beamHalf: Float,
+        ): LaserBeam {
             val scene = gctx.scene as? MainScene
-                ?: return LaserBeam(gctx).init(startBottom, lifetime, power)
+                ?: return LaserBeam(gctx).init(startBottom, lifetime, power, beamHalf)
             val laser = scene.world.obtain(LaserBeam::class.java) ?: LaserBeam(gctx)
-            return laser.init(startBottom, lifetime, power)
+            return laser.init(startBottom, lifetime, power, beamHalf)
         }
     }
 }

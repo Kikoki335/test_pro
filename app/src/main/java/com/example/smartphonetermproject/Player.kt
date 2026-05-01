@@ -62,8 +62,8 @@ class Player(val gctx: GameContext) : Sprite(gctx, R.mipmap.player_placeholder),
     // 4주차 #4 — 무기 종류 + 등급. 발사는 currentWeapon.fire(this, ...) 한 줄로 위임.
     // 시작 무기 / 등급은 사용자가 무기 검증 흐름에 따라 한 줄씩 바꿔가며 테스트
     // (EnemyGenerator 의 single-type spawn 검증과 같은 패턴).
-    var currentWeapon: Weapon = MissileWeapon
-    var weaponGrade: WeaponGrade = WeaponGrade.RARE
+    var currentWeapon: Weapon = LaserWeapon
+    var weaponGrade: WeaponGrade = WeaponGrade.EPIC
 
     // Bullet/HomingMissile/LaserBeam 등 모든 발사물이 사용하는 데미지 계산. attackMul + critRate 반영.
     fun calculatePower(): Int {

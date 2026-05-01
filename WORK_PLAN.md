@@ -606,9 +606,9 @@ SUICIDE → RANGED → SPLIT 순서로 한 종류씩 도입하며 검증. 자폭
 - 3종 동시 등장 시 spawn 빈도, HP, Player 데미지 시각적 검증하면서 1차 밸런싱 (수치 조정만, 동작 추가 X).
 - 3주차 종료 빌드/플레이 확인.
 
-### 4주차 (~5/1, 누적) — 5 commits *(5주차 일부 당김. 능력치 증가 sub-task 는 #3 보상 카드에 흡수)*
+### 4주차 (~5/1, 누적) — 6 commits *(5주차 일부 당김. 능력치 증가 sub-task 는 #3 보상 카드에 흡수, #5 무기 보상 + #6 풀 룰 보강 분리)*
 
-> **commit 분할 단위 (사용자 결정)**: ① EXP 시스템 (ExpOrb + ExpLabel), ② 레벨업 구조 (LevelUpScene + push/pop, placeholder 카드 3장 모두 동일 텍스트, levelUp 만), ③ 보상 카드 (공격력 / 공격속도 / 탄환 개수 3종 stat 카드 + 좌상단 디버그 화면에 stat 수치 표시), ④ 무기 Registry + Dual Shot, ⑤ Triple Shot + Laser. 한 commit 안에 둘 이상의 시스템 섞지 말 것.
+> **commit 분할 단위 (사용자 결정)**: ① EXP 시스템 (ExpOrb + ExpLabel), ② 레벨업 구조 (LevelUpScene + push/pop, placeholder 카드 3장 모두 동일 텍스트, levelUp 만), ③ 보상 카드 (공격력 / 공속 / **치명타 확률** 3종 stat 카드 — 탄환수 stat 은 무기 시스템으로 이동, + 좌하단 디버그 HUD stat 수치 표시), ④ Weapon Registry + 4종 + 등급 (Default / Shotgun / Laser / Missile × RARE/EPIC), ⑤ 무기 보상 카드 (RewardCard + CardPool + LevelUpScene 통합, sprite + 등급 색), ⑥ 풀 룰 보강 (영웅 무기 받으면 같은 무기 희귀도 풀 제외). 한 commit 안에 둘 이상의 시스템 섞지 말 것.
 
 #### [x] #1 — EXP 시스템 (ExpOrb + ExpLabel) *(코드 완료, 2026-05-01. 1 commit 단위)*
 
@@ -655,11 +655,11 @@ ExpLabel (HUD):
 - **활용**: CookieRun 4/29 `8017a48` MapObject Registry 패턴 응용 — `sealed class Weapon` + 4 object + `WeaponRegistry`.
 - `enum class WeaponGrade { RARE, EPIC }` — 2단계만 (전설은 5주차 스킬 자리, 사용자 결정).
 - `Weapon` 추상 멤버: `displayName`, `fireInterval`, `fire(player, scene, gctx, grade)`.
-- 4종 동작:
-  - `DefaultWeapon` (직진, fireInterval 0.3) — 기존 `fireBullet` 의 단순 직진 한 발.
-  - `ShotgunWeapon` (부채꼴, 0.6) — 희귀 3발 ±15° / 영웅 5발 ±20°. Bullet 의 vx/vy 인자로 사선 발사.
-  - `LaserWeapon` (직선 관통, 1.2) — `LaserBeam` 별도 클래스. 희귀 0.6초 / 영웅 1.0초 지속, `LASER_TICK_INTERVAL = 0.1f` 마다 빔 안 enemy 들에 데미지 (자기 update 에서 직접 처리, CollisionChecker 분기 X). 빔은 매 프레임 Player 위치 따라 x 갱신.
-  - `MissileWeapon` (추적, 0.8) — `HomingMissile` 별도 클래스. 희귀 1발 / 영웅 2발 (좌·우 ±30 동시). 매 프레임 가장 가까운 enemy 방향으로 vx/vy lerp (TURN_RATE = 6f).
+- 4종 동작 (등급 차이 정리 — **샷건/호밍 = 발수, 레이저 = 굵기**):
+  - `DefaultWeapon` (직진, fireInterval 0.3) — 단순 직진 한 발. 카드 풀에 안 나옴.
+  - `ShotgunWeapon` (부채꼴, 0.6) — **희귀 3발 ±15° / 영웅 5발 ±20°**. Bullet vx/vy 사선.
+  - `LaserWeapon` (직선 관통, 1.2) — `LaserBeam` 별도. **희귀 폭 120 (반경 60) / 영웅 폭 200 (반경 100, 화면 22%)**. 둘 다 `LASER_LIFETIME = 1.0f` 통일, `LASER_TICK_INTERVAL = 0.1f`. 빔이 매 프레임 Player x 따라감. PNG (`weapon_laser`) 가 가로 stretch 되어 폭이 굵어져도 코어/글로우 라인은 자동 늘어남.
+  - `MissileWeapon` (추적, 0.8) — `HomingMissile` 별도. **희귀 1발 / 영웅 2발 (좌·우 ±30 동시)**. vx/vy lerp 추적 (TURN_RATE = 6f). sprite 가 진행 방향으로 회전 (collisionRect 는 axis-aligned 유지 — 사용자 결정).
 - `Player.currentWeapon: Weapon` + `weaponGrade: WeaponGrade`. 시작값 = `ShotgunWeapon` + `RARE` (사용자 결정 — 검증 단계 한 줄 변경으로 무기 교체).
 - `Player.fireBullet` → `currentWeapon.fire(this, scene, gctx, weaponGrade)` 한 줄 위임.
 - `Player.calculatePower(): Int` 추가 — `attackMul + critRate` 적용한 데미지 계산을 모든 Weapon 이 공유.
@@ -667,10 +667,30 @@ ExpLabel (HUD):
 - `MainScene.Layer` 에 `LASER`, `MISSILE` 추가 (BULLET 위, ENEMY 아래).
 - `CollisionChecker` — MISSILE ↔ ENEMY 검사 추가 (Bullet ↔ Enemy 와 같은 패턴, 충돌 시 `world.remove(missile)`). LASER 는 자체 처리.
 
-#### [ ] #5 — 무기 검증 (Shotgun / Laser / Missile 단계별) + LevelUpScene 무기 카드 통합
+#### [x] #5 — 무기 보상 카드 시스템 (RewardCard + CardPool + LevelUpScene 통합) *(코드 완료, 2026-05-01)*
 
-- 사용자가 `Player.currentWeapon` 한 줄 바꿔가며 단독 검증 (EnemyGenerator single-type 패턴). Shotgun → Laser → Missile 순서.
-- 검증 끝나면 LevelUpScene 카드 풀에 무기/등급 카드 통합 (예: 같은 무기 다시 받으면 RARE → EPIC 업그레이드).
+- `RewardCard` sealed class — `AttackStatCard` / `FireRateStatCard` / `CritRateStatCard` (object 3종, stat 카드) + `WeaponCard(weapon, grade)` (class). `apply(player)` 가 보상 적용.
+- `CardPool` — `statCards` 3종 (영구) + `weaponCards` 6종 (3 무기 × 2 등급). `pickThree()` 가 합친 풀에서 무작위 3장. `consume(card)` 는 WeaponCard 만 풀에서 제거 (stat 카드는 항상 풀 그대로).
+- `Weapon.cardSpriteResId` 추가 (각 무기의 카드 sprite). `WeaponGrade.cardColor` 추가 (희귀 파랑 (96,165,250) / 영웅 보라 (168,85,247)).
+- `LevelUpScene` — `cards: List<RewardCard>` 인자. WeaponCard 는 위쪽 60% sprite + 아래쪽 40% 텍스트 ("희귀 샷건" / "장착"), stat 카드는 텍스트 두 줄. stroke 색은 카드 종류별. onCardSelected → `card.apply(player)` + `cardPool.consume(card)` + `levelUp()` + pop.
+- `MainScene.cardPool` 인스턴스 멤버. `update()` 의 LevelUpScene push 시 `cardPool.pickThree()` 결과 전달.
+- 카드 풀 크기: 시작 9 (stat 3 + 무기 6) → 무기 다 받으면 3 (stat 만). 항상 ≥ 3 보장.
+
+#### [ ] #6 — 무기 카드 풀 룰 보강 (영웅 받으면 같은 무기 희귀도 제외)
+
+- 현재 `CardPool.consume(card)` 는 받은 (무기, 등급) 조합만 제거. **사용자 결정 — 영웅 무기 받으면 같은 무기의 희귀 등급도 같이 제거** (다운그레이드 의미 없음). 희귀 받으면 영웅은 그대로 (업그레이드 가능).
+- 변경:
+  ```kotlin
+  fun consume(card: RewardCard) {
+      if (card is WeaponCard) {
+          weaponCards.remove(card)
+          if (card.grade == WeaponGrade.EPIC) {
+              weaponCards.removeAll { it.weapon == card.weapon && it.grade == WeaponGrade.RARE }
+          }
+      }
+  }
+  ```
+- 풀 크기 변동: 영웅 받을 때마다 -2 (영웅 + 같은 무기 희귀). 희귀 받을 때마다 -1.
 
 ### 5주차 (~5/8, 누적) — 4 commits *(framework 진도 재확인 후 조정)*
 
@@ -781,7 +801,7 @@ ExpLabel (HUD):
 
 ## 9. 현재 진척
 
-> **마지막 갱신**: 2026-05-01 (3주차 검증 모두 완료. 4주차 진입 — #1 EXP 시스템 (ExpOrb + ExpLabel) ✅, #2 레벨업 구조 (LevelUpScene + placeholder 카드 3장 모두 동일) 코드 완료 검증 중. BOSS_ENTER_TIME 60f 정착. 사용자 결정으로 **4주차 commit 분할** = ① EXP 시스템 / ② 레벨업 구조 / ③ 보상 카드 (공격력/공속/탄환 개수 3종 stat + 디버그 HUD stat 표시) / ④ 무기 Registry + Dual Shot / ⑤ Triple Shot + Laser. 다음은 #3 보상 카드. 코드 working tree 모두 unstaged.)
+> **마지막 갱신**: 2026-05-01 (4주차 #1~#5 검증 완료. EXP 시스템 / 레벨업 구조 / 보상 카드 (공격력 x2 / 공속 +30% / **치명타 +50%**, 탄환수 stat 은 무기 시스템으로 이동) + 디버그 HUD / Weapon Registry + 4종 + 등급 (레이저 = **굵기 차별** 희귀 60 / 영웅 120, 샷건/호밍 = 발수) / 무기 보상 카드 (CardPool, RewardCard sealed, 받은 (무기, 등급) 조합만 풀 제외). 시작 무기 = 영웅 레이저로 굵은 빔 검증 단계. 다음 #6 = CardPool.consume 의 EPIC 분기 추가 (영웅 받으면 같은 무기 희귀도 풀 제외). 코드 working tree 모두 unstaged.)
 
 ### 9.1 완료 / 진행 / 다음
 
@@ -808,8 +828,9 @@ ExpLabel (HUD):
 | ✅ 디바이스 검증 OK | **4주차 #1 EXP 시스템 (ExpOrb + ExpLabel)** | ExpOrb (cyan 원, drop 즉시 Player homing 800f/s) + ExpLabel (좌하단 HP 게이지 옆 cyan "Lv.N EXP e/m") |
 | ✅ 디바이스 검증 OK | **4주차 #2 레벨업 구조 (LevelUpScene + placeholder 카드)** | level/maxExp/levelUp 구조. BOSS_ENTER_TIME 60f. |
 | ✅ 검증 OK | **4주차 #3 보상 카드 (공격력 / 공속 / 치명타) + 디버그 HUD stat 표시** | bulletCount → critRate (탄환수는 무기 등급 영역). ATK x2 / RATE +30% / CRIT +50%, CRIT_MUL=3 |
-| 🟡 코드 완료, 디바이스 검증 중 | **4주차 #4 Weapon Registry + 4종 + 등급** | sealed Weapon + DefaultWeapon/ShotgunWeapon/LaserWeapon/MissileWeapon + WeaponGrade(RARE/EPIC). Bullet vx/vy, LaserBeam/HomingMissile 별도. Player 시작값 = ShotgunWeapon RARE |
-| ▶ **다음** | **#4 검증 단계별 (currentWeapon 한 줄 변경): Shotgun → Laser → Missile → 등급 EPIC** | 각 무기 동작 + 등급별 차이 + critRate 데미지 적용 확인 |
+| ✅ 검증 OK | **4주차 #4 Weapon Registry + 4종 + 등급** | Shotgun/Laser/Missile 각각 검증, sprite + hit vfx 적용. 레이저 등급 차이 = 굵기 (희귀 60 / 영웅 120) 로 정착 |
+| ✅ 검증 OK | **4주차 #5 무기 보상 카드 (RewardCard + CardPool + LevelUpScene 통합)** | stat 3 영구 + 무기 6 (3 × 2 등급) 받으면 그 조합만 풀 제외. 카드는 sprite + 등급 색 |
+| ▶ **다음** | **4주차 #6 풀 룰 보강 — 영웅 받으면 같은 무기 희귀도 제외** | CardPool.consume 의 EPIC 분기 추가 (한 줄). + 시작 무기 = 영웅 레이저 (굵은 빔 검증 단계) |
 | ⏸ 대기 | 4~8주차 전부 | |
 
 ### 9.2 빌드 / 동작 확인 상태
@@ -946,11 +967,13 @@ DragonFlight 4/9 의 최종 enum 순서 `BACKGROUND, PLAYER, BULLET, ENEMY, CONT
     - **ScoreLabel**: `displayScore` 분리 + lerp 패턴 처음부터.
     - **BOSS_ENTER_TIME**: README §1 사양 그대로 **`60f`** (1주차 #5 시점 테스트값 10f → 4주차 #2 에서 60f 로 정착).
     - **MainScene 은 open class** + 세 생성자 파라미터 (`backgroundResId`, **`val isBossStage`**) 처음부터. **BossScene 진입 시 `if (!isBossStage) add(enemyGenerator, ...)` 로 spawn 정지** + **BossTimerHud 가 isBossStage 시 "BOSS STAGE" 라벨** (mm:ss 대신). BossScene = 한 줄 wrapper.
-    - **에셋 매핑** (mipmap-xxxhdpi): `sky_bg`, `boss_bg`, `title_bg`, `sky_star`, `player_placeholder`, `bullet_placeholder`, `enemy_suicide`, `enemy_ranged`, `enemy_split`, `enemy_split_minion`, `enemy_bullet`, `vfx_player_hit`, `vfx_enemy_hit`, `vfx_suicide_die`, `vfx_ranged_die`, `vfx_split_burst`, `vfx_minion_die`.
+    - **에셋 매핑** (mipmap-xxxhdpi): `sky_bg`, `boss_bg`, `title_bg`, `sky_star`, `player_placeholder`, `bullet_placeholder`, `enemy_suicide`, `enemy_ranged`, `enemy_split`, `enemy_split_minion`, `enemy_bullet`, `vfx_player_hit`, `vfx_enemy_hit`, `vfx_suicide_die`, `vfx_ranged_die`, `vfx_split_burst`, `vfx_minion_die`, `weapon_shotgun`, `weapon_laser`, `weapon_homing`, `vfx_shotgun_hit`, `vfx_laser_hit` (현재 미사용), `vfx_homing_hit`.
     - **EXP / 레벨 (4주차 #1~#2)**: `Player.exp`, `Player.level = 1`, `Player.maxExp = INITIAL_MAX_EXP = 5`, `MAX_EXP_GROWTH = 1.5f`. `gainExp(amount)` 는 누적만, `levelUp()` 은 외부 (LevelUpScene) 가 호출. ExpOrb (cyan 원, drop 즉시 Player homing 800f/s, value 1) → ExpLabel (좌하단 HP 게이지 옆 cyan, `"Lv.N  EXP e/m"`).
     - **LevelUpScene (4주차 #2)**: MainScene 위 push, 반투명 검정 + 카드 3장 (230×320, cyan 테두리). #2 단계는 placeholder (3장 모두 동일 `"+ Lv N+1"` + `levelUp()` 만), #3 부터 카드별 보상 분기 (공격력 ×1.2 / 공속 ×1.15 / 탄환 +1).
     - **Player stat 보상 (4주차 #3)**: `attackMul=1f`, `fireRateMul=1f`, `bulletCount=1`. Bullet 에 `var power: Int = DAMAGE`. fireBullet 에서 `fireCooldown = FIRE_INTERVAL / fireRateMul`, power = `(DAMAGE × attackMul).toInt().coerceAtLeast(1)`, bulletCount > 1 이면 `BULLET_SPREAD = 50f` 가로 spread.
-    - **카드 보상 배수 (4주차 #3)**: `ATK_BOOST = 2.0f`, `RATE_BOOST = 1.3f`, 탄환 `+1` (사용자 결정 — 한 번에 체감되는 큰 폭).
+    - **카드 보상 배수 (4주차 #3 + #5)**: stat 카드 = `ATK_BOOST = 2.0f` / `RATE_BOOST = 1.3f` / `CRIT_BOOST = 0.5f` (1.0 캡), `CRIT_MUL = 3` (Player 의 calculatePower 가 매 발사마다 critRate 굴림). 무기 카드는 `WeaponCard(weapon, grade)` — apply 시 currentWeapon + weaponGrade 교체.
+    - **무기 등급 차이 (4주차 #4)**: 샷건 = 발수 (희귀 3 / 영웅 5), 호밍 = 발수 (희귀 1 / 영웅 2), **레이저 = 굵기** (희귀 beamHalf 60 / 영웅 150, 폭 120 / 300, lifetime 통일 1.0f). lifetime / fireInterval 은 등급 무관. **LaserBeam 충돌 폭 = 시각 폭 × 0.15** (영웅 시각 폭 300 → 충돌 45, 코어 라인만 데미지 — "충돌박스는 액터보다 작아야 자연스럽다" 룰, 다른 IBoxCollidable 의 inset 0.8 보다 훨씬 좁은 이유는 빔 sprite 가 화면을 가로지르는 큰 시각 효과라 글로우 영역까지 잡으면 시각/물리 어긋남).
+    - **무기 카드 풀 룰 (4주차 #5 + #6)**: stat 3 카드는 영구 풀, 무기 6 카드 (3 무기 × 2 등급) 는 받으면 그 조합 제외. **#6 보강 — 영웅 받으면 같은 무기 희귀도 함께 제외** (다운그레이드 무의미). 희귀 받으면 영웅은 그대로 (업그레이드 가능).
     - **EXP drop 룰 (4주차 #1)**: `Enemy.startDying` 안에서 `if (type != Type.SPLIT) ExpOrb spawn` — SPLIT 본체는 분열만 시키고 EXP X, SPLIT_MINION 처치해야 보상.
     - **DebugStatLabel (4주차 #3)**: textSize 40, `Typeface.MONOSPACE`, `Color.WHITE`. **위치는 화면 하단 좌측** (x=30, y=metrics.height-14), format `"ATK x%.2f RATE x%.2f COUNT %d"`. + framework `GameView.debugPaint` color BLUE → WHITE (§8.2 — Sky Blaster 검정+파랑 배경 가시성).
 

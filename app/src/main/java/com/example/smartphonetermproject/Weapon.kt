@@ -74,18 +74,23 @@ object ShotgunWeapon : Weapon() {
 // 자기 안에 있는 enemy 들에게 데미지 — 무기는 단지 빔 객체를 spawn 하는 역할.
 object LaserWeapon : Weapon() {
     override val displayName = "레이저"
-    // fireInterval > lifetime 이라 빔 끊김 짧게. 영웅은 lifetime 1초 + cooldown 0.2초 = 1.2.
     override val fireInterval = 1.2f
     override val cardSpriteResId = R.mipmap.weapon_laser
 
     override fun fire(player: Player, scene: MainScene, gctx: GameContext, grade: WeaponGrade) {
-        val lifetime = if (grade == WeaponGrade.EPIC) 1.0f else 0.6f
+        // 사용자 결정 — 레이저 등급 차이는 굵기. lifetime / fireInterval 은 통일.
+        // 시각 임팩트 강화 (가로 stretch) — 희귀 = 반경 60 (폭 120), 영웅 = 반경 100 (폭 200).
+        // 영웅 폭 200 ≈ 화면 폭 900 의 22% (Player 사이즈와 비슷). 가로만 키우니 sprite 의 세로
+        // 글로우 라인은 drawBitmap dstRect stretch 로 자동 늘어남 (PNG 비율 무관).
+        val beamHalf = if (grade == WeaponGrade.EPIC) 150f else 60f
         val muzzleY = player.y - Player.PLAYER_HEIGHT / 2f - Player.BULLET_OFFSET
-        // 빔 한 틱 데미지가 너무 강하지 않도록 base 의 1/2 — 6틱 (희귀) ~ 10틱 (영웅) 누적 시 충분.
         val tickPower = (player.calculatePower() / 2).coerceAtLeast(1)
-        val laser = LaserBeam.get(gctx, muzzleY, lifetime, tickPower)
+        val laser = LaserBeam.get(gctx, muzzleY, LASER_LIFETIME, tickPower, beamHalf)
         scene.world.add(laser, MainScene.Layer.LASER)
     }
+
+    // 등급 통일 lifetime — 굵기 차이가 곧 화력 차이라 시간까지 차이 둘 필요 없음.
+    private const val LASER_LIFETIME = 1.0f
 }
 
 // 가장 가까운 적을 추적하는 미사일. 등급별 동시 발사 수 (희귀 1 / 영웅 2).

@@ -1,0 +1,39 @@
+[33mcommit d32d63aba9cafc86015246ace2840cdc6bb36b3e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author:     kmw7855 <rrr7538@naver.com>
+AuthorDate: Fri May 1 22:42:40 2026 +0900
+Commit:     kmw7855 <rrr7538@naver.com>
+CommitDate: Fri May 1 23:48:24 2026 +0900
+
+    레벨업시 보상으로 무기 추가
+
+[33mcommit 00c21ea655994de4f089beb6dc4968bdce515bc3[m
+Author:     kmw7855 <rrr7538@naver.com>
+AuthorDate: Fri May 1 22:21:50 2026 +0900
+Commit:     kmw7855 <rrr7538@naver.com>
+CommitDate: Fri May 1 23:48:24 2026 +0900
+
+    레이저 제작
+
+[33mcommit 5870afb5076ef6d7be68a02debb174953fffbdaf[m
+Author:     kmw7855 <rrr7538@naver.com>
+AuthorDate: Fri May 1 22:17:39 2026 +0900
+Commit:     kmw7855 <rrr7538@naver.com>
+CommitDate: Fri May 1 23:48:24 2026 +0900
+
+    샷건 제작
+
+[33mcommit b66894c63df2e75c574c4a73e156435e354c6927[m
+Author:     kmw7855 <rrr7538@naver.com>
+AuthorDate: Fri May 1 01:11:16 2026 +0900
+Commit:     kmw7855 <rrr7538@naver.com>
+CommitDate: Fri May 1 23:48:24 2026 +0900
+
+    경험치 제작
+
+[33mcommit 001985d3767d49829e54ded4f926057c4aab4f87[m
+Author:     kmw7855 <rrr7538@naver.com>
+AuthorDate: Fri Apr 10 23:32:10 2026 +0900
+Commit:     kmw7855 <rrr7538@naver.com>
+CommitDate: Fri Apr 10 23:32:10 2026 +0900
+
+    경험치 제작
